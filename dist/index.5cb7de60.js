@@ -140,12 +140,12 @@
       this[globalName] = mainExports;
     }
   }
-})({"97JVM":[function(require,module,exports) {
+})({"8Ye98":[function(require,module,exports) {
 var HMR_HOST = null;
 var HMR_PORT = null;
 var HMR_SECURE = false;
-var HMR_ENV_HASH = "4e5dac8afe405db7";
-module.bundle.HMR_BUNDLE_ID = "08525b46174b228b";
+var HMR_ENV_HASH = "69f74e7f31319ffd";
+module.bundle.HMR_BUNDLE_ID = "92d425515cb7de60";
 "use strict";
 function _createForOfIteratorHelper(o, allowArrayLike) {
     var it;
@@ -454,6 +454,117 @@ function hmrAcceptRun(bundle, id) {
     acceptedAssets[id] = true;
 }
 
-},{}]},["97JVM"], null, "parcelRequire889a")
+},{}],"6cF5V":[function(require,module,exports) {
+var parcelHelpers = require("@parcel/transformer-js/src/esmodule-helpers.js");
+var _getContext = require("./utils/getContext");
+var _getContextDefault = parcelHelpers.interopDefault(_getContext);
+var _createShader = require("./utils/createShader");
+var _createShaderDefault = parcelHelpers.interopDefault(_createShader);
+var _createProgram = require("./utils/createProgram");
+var _createProgramDefault = parcelHelpers.interopDefault(_createProgram);
+const vertexShaderSrc = `    #version 300 es\n    in vec2 a_vert_pos;\n    uniform vec2 u_resolution;\n    void main() {\n        vec2 normalized_coords = a_vert_pos / u_resolution;\n        vec2 clipspace_coords = (normalized_coords * 2.0) - 1.0;\n        gl_Position = vec4(clipspace_coords * vec2(1, -1), 0, 1);\n    }\n`;
+const fragShaderSrc = `   #version 300 es\n    precision highp float;\n    out vec4 out_color;\n    void main() {\n        out_color = vec4(1, 0.6, 0.8, 1);\n    }\n`;
+try {
+    const canvas = document.querySelector("#viewport");
+    canvas.width = window.innerWidth;
+    canvas.height = window.innerHeight;
+    const gl = _getContextDefault.default("#viewport");
+    const program = _createProgramDefault.default(gl, _createShaderDefault.default(gl, vertexShaderSrc, gl.VERTEX_SHADER), _createShaderDefault.default(gl, fragShaderSrc, gl.FRAGMENT_SHADER));
+    const uResLocation = gl.getUniformLocation(program, "u_resolution");
+    const aVertPosLocation = gl.getAttribLocation(program, "a_vert_pos");
+    const vertices = [
+        100,
+        100,
+        300,
+        100,
+        200,
+        200
+    ];
+    const posBuffer = gl.createBuffer();
+    gl.bindBuffer(gl.ARRAY_BUFFER, posBuffer);
+    gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(vertices), gl.STATIC_DRAW);
+    const vao = gl.createVertexArray();
+    gl.bindVertexArray(vao);
+    gl.enableVertexAttribArray(aVertPosLocation);
+    gl.vertexAttribPointer(aVertPosLocation, 2, gl.FLOAT, false, 0, 0);
+    gl.useProgram(program);
+    gl.viewport(0, 0, canvas.width, canvas.height);
+    gl.uniform2f(uResLocation, canvas.width, canvas.height);
+    gl.bindVertexArray(vao);
+    gl.clearColor(0, 0, 0, 1);
+    gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+    gl.drawArrays(gl.TRIANGLES, 0, 3);
+} catch (e) {
+    console.log(e.message);
+}
 
-//# sourceMappingURL=index.174b228b.js.map
+},{"./utils/getContext":"bzbcp","@parcel/transformer-js/src/esmodule-helpers.js":"JacNc","./utils/createProgram":"itjX6","./utils/createShader":"djIcq"}],"bzbcp":[function(require,module,exports) {
+var parcelHelpers = require("@parcel/transformer-js/src/esmodule-helpers.js");
+parcelHelpers.defineInteropFlag(exports);
+exports.default = (cnvSelector)=>{
+    const canvas = document.querySelector(cnvSelector);
+    const gl = canvas.getContext("webgl2");
+    if (!gl) throw new Error(`Webgl support not available`);
+    return gl;
+};
+
+},{"@parcel/transformer-js/src/esmodule-helpers.js":"JacNc"}],"JacNc":[function(require,module,exports) {
+exports.interopDefault = function(a) {
+    return a && a.__esModule ? a : {
+        default: a
+    };
+};
+exports.defineInteropFlag = function(a) {
+    Object.defineProperty(a, '__esModule', {
+        value: true
+    });
+};
+exports.exportAll = function(source, dest) {
+    Object.keys(source).forEach(function(key) {
+        if (key === 'default' || key === '__esModule') return;
+        // Skip duplicate re-exports when they have the same value.
+        if (key in dest && dest[key] === source[key]) return;
+        Object.defineProperty(dest, key, {
+            enumerable: true,
+            get: function() {
+                return source[key];
+            }
+        });
+    });
+    return dest;
+};
+exports.export = function(dest, destName, get) {
+    Object.defineProperty(dest, destName, {
+        enumerable: true,
+        get: get
+    });
+};
+
+},{}],"itjX6":[function(require,module,exports) {
+var parcelHelpers = require("@parcel/transformer-js/src/esmodule-helpers.js");
+parcelHelpers.defineInteropFlag(exports);
+exports.default = (gl, vertShader, fragShader)=>{
+    const program = gl.createProgram();
+    gl.attachShader(program, vertShader);
+    gl.attachShader(program, fragShader);
+    gl.linkProgram(program);
+    const success = gl.getProgramParameter(program, gl.LINK_STATUS);
+    if (!success) throw new Error(`Couldnt link shaders: ${gl.getProgramInfoLog(program)}`);
+    return program;
+};
+
+},{"@parcel/transformer-js/src/esmodule-helpers.js":"JacNc"}],"djIcq":[function(require,module,exports) {
+var parcelHelpers = require("@parcel/transformer-js/src/esmodule-helpers.js");
+parcelHelpers.defineInteropFlag(exports);
+exports.default = (gl, shaderSrc, shaderType)=>{
+    const shader = gl.createShader(shaderType);
+    gl.shaderSource(shader, shaderSrc);
+    gl.compileShader(shader);
+    const success = gl.getShaderParameter(shader, gl.COMPILE_STATUS);
+    if (!success) throw new Error(`Couldn't compile shader: ${gl.getShaderInfoLog(shader)}`);
+    return shader;
+};
+
+},{"@parcel/transformer-js/src/esmodule-helpers.js":"JacNc"}]},["8Ye98","6cF5V"], "6cF5V", "parcelRequire889a")
+
+//# sourceMappingURL=index.5cb7de60.js.map

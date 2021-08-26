@@ -3,7 +3,7 @@ export default (gl, vertShader, fragShader) => {
     gl.attachShader(program, vertShader)
     gl.attachShader(program, fragShader)
     gl.linkProgram(program)
-    const success = program.getProgramParameter(gl.LINK_STATUS)
+    const success = gl.getProgramParameter(program, gl.LINK_STATUS)
     if (!success) {
         throw new Error(`Couldnt link shaders: ${gl.getProgramInfoLog(program)}`)
     }
