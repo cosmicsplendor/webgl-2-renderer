@@ -463,7 +463,7 @@ var _createShaderDefault = parcelHelpers.interopDefault(_createShader);
 var _createProgram = require("./utils/createProgram");
 var _createProgramDefault = parcelHelpers.interopDefault(_createProgram);
 const vertexShaderSrc = `    #version 300 es\n    in vec2 a_vert_pos;\n    uniform vec2 u_resolution;\n    void main() {\n        vec2 normalized_coords = a_vert_pos / u_resolution;\n        vec2 clipspace_coords = (normalized_coords * 2.0) - 1.0;\n        gl_Position = vec4(clipspace_coords * vec2(1, -1), 0, 1);\n    }\n`;
-const fragShaderSrc = `   #version 300 es\n    precision highp float;\n    out vec4 out_color;\n    void main() {\n        out_color = vec4(1, 0.6, 0.8, 1);\n    }\n`;
+const fragShaderSrc = `   #version 300 es\n    precision highp float;\n    uniform vec4 u_color;\n    out vec4 out_color;\n    void main() {\n        out_color = u_color;\n    }\n`;
 try {
     const canvas = document.querySelector("#viewport");
     canvas.width = window.innerWidth;
@@ -472,17 +472,9 @@ try {
     const program = _createProgramDefault.default(gl, _createShaderDefault.default(gl, vertexShaderSrc, gl.VERTEX_SHADER), _createShaderDefault.default(gl, fragShaderSrc, gl.FRAGMENT_SHADER));
     const uResLocation = gl.getUniformLocation(program, "u_resolution");
     const aVertPosLocation = gl.getAttribLocation(program, "a_vert_pos");
-    const vertices = [
-        100,
-        100,
-        300,
-        100,
-        200,
-        200
-    ];
+    const uColorLocation = gl.getUniformLocation(program, "u_color");
     const posBuffer = gl.createBuffer();
     gl.bindBuffer(gl.ARRAY_BUFFER, posBuffer);
-    gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(vertices), gl.STATIC_DRAW);
     const vao = gl.createVertexArray();
     gl.bindVertexArray(vao);
     gl.enableVertexAttribArray(aVertPosLocation);
@@ -493,12 +485,26 @@ try {
     gl.bindVertexArray(vao);
     gl.clearColor(0, 0, 0, 1);
     gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
-    gl.drawArrays(gl.TRIANGLES, 0, 3);
+    for(let x = 0; x < 10; x++){
+        gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([
+            rand(1000),
+            rand(1000),
+            rand(1000),
+            rand(1000),
+            rand(1000),
+            rand(1000)
+        ]), gl.STATIC_DRAW);
+        gl.uniform4f(uColorLocation, rand(256) / 256, rand(256) / 256, rand(256) / 256, 1);
+        gl.drawArrays(gl.TRIANGLES, 0, 3);
+    }
+    function rand(n) {
+        return Math.floor(Math.random() * n);
+    }
 } catch (e) {
     console.log(e.message);
 }
 
-},{"./utils/getContext":"bzbcp","@parcel/transformer-js/src/esmodule-helpers.js":"JacNc","./utils/createProgram":"itjX6","./utils/createShader":"djIcq"}],"bzbcp":[function(require,module,exports) {
+},{"./utils/getContext":"bzbcp","./utils/createShader":"djIcq","./utils/createProgram":"itjX6","@parcel/transformer-js/src/esmodule-helpers.js":"JacNc"}],"bzbcp":[function(require,module,exports) {
 var parcelHelpers = require("@parcel/transformer-js/src/esmodule-helpers.js");
 parcelHelpers.defineInteropFlag(exports);
 exports.default = (cnvSelector)=>{
@@ -540,7 +546,19 @@ exports.export = function(dest, destName, get) {
     });
 };
 
-},{}],"itjX6":[function(require,module,exports) {
+},{}],"djIcq":[function(require,module,exports) {
+var parcelHelpers = require("@parcel/transformer-js/src/esmodule-helpers.js");
+parcelHelpers.defineInteropFlag(exports);
+exports.default = (gl, shaderSrc, shaderType)=>{
+    const shader = gl.createShader(shaderType);
+    gl.shaderSource(shader, shaderSrc);
+    gl.compileShader(shader);
+    const success = gl.getShaderParameter(shader, gl.COMPILE_STATUS);
+    if (!success) throw new Error(`Couldn't compile shader: ${gl.getShaderInfoLog(shader)}`);
+    return shader;
+};
+
+},{"@parcel/transformer-js/src/esmodule-helpers.js":"JacNc"}],"itjX6":[function(require,module,exports) {
 var parcelHelpers = require("@parcel/transformer-js/src/esmodule-helpers.js");
 parcelHelpers.defineInteropFlag(exports);
 exports.default = (gl, vertShader, fragShader)=>{
@@ -551,18 +569,6 @@ exports.default = (gl, vertShader, fragShader)=>{
     const success = gl.getProgramParameter(program, gl.LINK_STATUS);
     if (!success) throw new Error(`Couldnt link shaders: ${gl.getProgramInfoLog(program)}`);
     return program;
-};
-
-},{"@parcel/transformer-js/src/esmodule-helpers.js":"JacNc"}],"djIcq":[function(require,module,exports) {
-var parcelHelpers = require("@parcel/transformer-js/src/esmodule-helpers.js");
-parcelHelpers.defineInteropFlag(exports);
-exports.default = (gl, shaderSrc, shaderType)=>{
-    const shader = gl.createShader(shaderType);
-    gl.shaderSource(shader, shaderSrc);
-    gl.compileShader(shader);
-    const success = gl.getShaderParameter(shader, gl.COMPILE_STATUS);
-    if (!success) throw new Error(`Couldn't compile shader: ${gl.getShaderInfoLog(shader)}`);
-    return shader;
 };
 
 },{"@parcel/transformer-js/src/esmodule-helpers.js":"JacNc"}]},["8Ye98","6cF5V"], "6cF5V", "parcelRequire889a")

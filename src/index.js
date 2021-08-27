@@ -15,9 +15,10 @@ const vertexShaderSrc =
 const fragShaderSrc = 
 `   #version 300 es
     precision highp float;
+    uniform vec4 u_color;
     out vec4 out_color;
     void main() {
-        out_color = vec4(1, 0.6, 0.8, 1);
+        out_color = u_color;
     }
 `
 
@@ -33,14 +34,9 @@ try {
     )
     const uResLocation = gl.getUniformLocation(program, "u_resolution")
     const aVertPosLocation = gl.getAttribLocation(program, "a_vert_pos")
-    const vertices = [
-        100, 100,
-        300, 100,
-        200, 200
-    ]
+    const uColorLocation = gl.getUniformLocation(program, "u_color")
     const posBuffer = gl.createBuffer()
     gl.bindBuffer(gl.ARRAY_BUFFER, posBuffer)
-    gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(vertices), gl.STATIC_DRAW)
     const vao = gl.createVertexArray()
     gl.bindVertexArray(vao)
     gl.enableVertexAttribArray(aVertPosLocation)
@@ -53,7 +49,18 @@ try {
 
     gl.clearColor(0, 0, 0, 1)
     gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT)
-    gl.drawArrays(gl.TRIANGLES, 0, 3)
+    for (let x = 0; x < 10; x++) {
+        gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([
+            rand(1000), rand(1000),
+            rand(1000), rand(1000),
+            rand(1000), rand(1000)
+        ]), gl.STATIC_DRAW)
+        gl.uniform4f(uColorLocation, rand(256) / 256, rand(256) / 256, rand(256) / 256, 1)
+        gl.drawArrays(gl.TRIANGLES, 0, 3)
+    }
+    function rand(n) {
+        return Math.floor(Math.random() * n)
+    }
 } catch(e) {
     console.log(e.message)
 }
