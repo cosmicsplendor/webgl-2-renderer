@@ -1,15 +1,20 @@
 import getContext from "./utils/getContext"
 import createShader from "./utils/createShader"
 import createProgram from "./utils/createProgram"
+import MatrixUtil from "./utils/Matrix"
 
 const vertexShaderSrc = 
-`    #version 300 es
+`   #version 300 es
     in vec2 a_vert_pos;
     uniform vec2 u_resolution;
+    uniform mat3 u_matrix;
     void main() {
-        vec2 normalized_coords = a_vert_pos / u_resolution;
-        vec2 clipspace_coords = (normalized_coords * 2.0) - 1.0;
-        gl_Position = vec4(clipspace_coords * vec2(1, -1), 0, 1);
+        vec2 pos_vec = (u_matrix * vec3(a_vert_pos, 1)).xy;
+
+        // converting to clipspace
+        vec2 normalized = pos_vec / u_resolution;
+        vec2 clipspace = (normalized * 2.0) - 1.0;
+        gl_Position = vec4(clipspace * vec2(1, -1), 0, 1);
     }
 `
 const fragShaderSrc = 
@@ -34,30 +39,59 @@ try {
     )
     const uResLocation = gl.getUniformLocation(program, "u_resolution")
     const aVertPosLocation = gl.getAttribLocation(program, "a_vert_pos")
+    const uMatLocation = gl.getUniformLocation(program, "u_matrix")
     const uColorLocation = gl.getUniformLocation(program, "u_color")
     const posBuffer = gl.createBuffer()
+    const matrixUtil = new MatrixUtil()
+    const uMatrix = matrixUtil.create() // identity matrix
+    // const vao = gl.createVertexArray()
+
     gl.bindBuffer(gl.ARRAY_BUFFER, posBuffer)
-    const vao = gl.createVertexArray()
-    gl.bindVertexArray(vao)
+    gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([
+        -0.5, -0.5,
+        0.5, -0.5,
+        -0.5, 0.5,
+        0.5, -0.5,
+        0.5, 0.5,
+        -0.5, 0.5
+    ]), gl.STATIC_DRAW)
+    // gl.bindVertexArray(vao) // for our purpose, global vao suffices -- not having to use a custom vao should give some (albeit miniscule) performance boost
     gl.enableVertexAttribArray(aVertPosLocation)
     gl.vertexAttribPointer(aVertPosLocation, 2, gl.FLOAT, false, 0, 0)
-
+    gl.bindBuffer(gl.ARRAY_BUFFER, null)
     gl.useProgram(program)
     gl.viewport(0, 0, canvas.width, canvas.height)
     gl.uniform2f(uResLocation, canvas.width, canvas.height)
-    gl.bindVertexArray(vao)
-
     gl.clearColor(0, 0, 0, 1)
-    gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT)
-    for (let x = 0; x < 10; x++) {
-        gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([
-            rand(1000), rand(1000),
-            rand(1000), rand(1000),
-            rand(1000), rand(1000)
-        ]), gl.STATIC_DRAW)
-        gl.uniform4f(uColorLocation, rand(256) / 256, rand(256) / 256, rand(256) / 256, 1)
-        gl.drawArrays(gl.TRIANGLES, 0, 3)
+    
+    let lastTs = 0
+    let dt, angle = 0
+    const width = 400
+    const height = 400
+    const rects = Array(10).fill(0).map(() => {
+        return {
+            x: rand(canvas.width - width),
+            y: rand(canvas.height - height),
+            color: [ Math.random(), Math.random(), Math.random(), 0.5 + Math.random()]
+        }
+    })
+    function draw(ts) {
+        dt = (ts - lastTs) / 1000
+        lastTs = ts
+        angle += dt * Math.PI / 4
+        gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT)
+        rects.forEach(({ x, y, color}) => {
+            matrixUtil.identity(uMatrix)
+            matrixUtil.scale(uMatrix, width, height)
+            matrixUtil.rotate(uMatrix, angle)
+            matrixUtil.translate(uMatrix, x + (width / 2), y + (height / 2))
+            gl.uniformMatrix3fv(uMatLocation, false, uMatrix)
+            gl.uniform4fv(uColorLocation, color)
+            gl.drawArrays(gl.TRIANGLES, 0, 6)
+        })
+        requestAnimationFrame(draw)
     }
+    requestAnimationFrame(draw)
     function rand(n) {
         return Math.floor(Math.random() * n)
     }

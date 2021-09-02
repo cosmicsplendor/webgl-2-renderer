@@ -462,7 +462,9 @@ var _createShader = require("./utils/createShader");
 var _createShaderDefault = parcelHelpers.interopDefault(_createShader);
 var _createProgram = require("./utils/createProgram");
 var _createProgramDefault = parcelHelpers.interopDefault(_createProgram);
-const vertexShaderSrc = `    #version 300 es\n    in vec2 a_vert_pos;\n    uniform vec2 u_resolution;\n    void main() {\n        vec2 normalized_coords = a_vert_pos / u_resolution;\n        vec2 clipspace_coords = (normalized_coords * 2.0) - 1.0;\n        gl_Position = vec4(clipspace_coords * vec2(1, -1), 0, 1);\n    }\n`;
+var _matrix = require("./utils/Matrix");
+var _matrixDefault = parcelHelpers.interopDefault(_matrix);
+const vertexShaderSrc = `   #version 300 es\n    in vec2 a_vert_pos;\n    uniform vec2 u_resolution;\n    uniform mat3 u_matrix;\n    void main() {\n        vec2 pos_vec = (u_matrix * vec3(a_vert_pos, 1)).xy;\n\n        // converting to clipspace\n        vec2 normalized = pos_vec / u_resolution;\n        vec2 clipspace = (normalized * 2.0) - 1.0;\n        gl_Position = vec4(clipspace * vec2(1, -1), 0, 1);\n    }\n`;
 const fragShaderSrc = `   #version 300 es\n    precision highp float;\n    uniform vec4 u_color;\n    out vec4 out_color;\n    void main() {\n        out_color = u_color;\n    }\n`;
 try {
     const canvas = document.querySelector("#viewport");
@@ -472,31 +474,69 @@ try {
     const program = _createProgramDefault.default(gl, _createShaderDefault.default(gl, vertexShaderSrc, gl.VERTEX_SHADER), _createShaderDefault.default(gl, fragShaderSrc, gl.FRAGMENT_SHADER));
     const uResLocation = gl.getUniformLocation(program, "u_resolution");
     const aVertPosLocation = gl.getAttribLocation(program, "a_vert_pos");
+    const uMatLocation = gl.getUniformLocation(program, "u_matrix");
     const uColorLocation = gl.getUniformLocation(program, "u_color");
     const posBuffer = gl.createBuffer();
+    const matrixUtil = new _matrixDefault.default();
+    const uMatrix = matrixUtil.create() // identity matrix
+    ;
+    // const vao = gl.createVertexArray()
     gl.bindBuffer(gl.ARRAY_BUFFER, posBuffer);
-    const vao = gl.createVertexArray();
-    gl.bindVertexArray(vao);
+    gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([
+        -0.5,
+        -0.5,
+        0.5,
+        -0.5,
+        -0.5,
+        0.5,
+        0.5,
+        -0.5,
+        0.5,
+        0.5,
+        -0.5,
+        0.5
+    ]), gl.STATIC_DRAW);
+    // gl.bindVertexArray(vao) // for our purpose, global vao suffices -- not having to use a custom vao should give some (albeit miniscule) performance boost
     gl.enableVertexAttribArray(aVertPosLocation);
     gl.vertexAttribPointer(aVertPosLocation, 2, gl.FLOAT, false, 0, 0);
+    gl.bindBuffer(gl.ARRAY_BUFFER, null);
     gl.useProgram(program);
     gl.viewport(0, 0, canvas.width, canvas.height);
     gl.uniform2f(uResLocation, canvas.width, canvas.height);
-    gl.bindVertexArray(vao);
     gl.clearColor(0, 0, 0, 1);
-    gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
-    for(let x = 0; x < 10; x++){
-        gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([
-            rand(1000),
-            rand(1000),
-            rand(1000),
-            rand(1000),
-            rand(1000),
-            rand(1000)
-        ]), gl.STATIC_DRAW);
-        gl.uniform4f(uColorLocation, rand(256) / 256, rand(256) / 256, rand(256) / 256, 1);
-        gl.drawArrays(gl.TRIANGLES, 0, 3);
+    let lastTs = 0;
+    let dt, angle = 0;
+    const width = 400;
+    const height = 400;
+    const rects = Array(10).fill(0).map(()=>{
+        return {
+            x: rand(canvas.width - width),
+            y: rand(canvas.height - height),
+            color: [
+                Math.random(),
+                Math.random(),
+                Math.random(),
+                0.5 + Math.random()
+            ]
+        };
+    });
+    function draw(ts) {
+        dt = (ts - lastTs) / 1000;
+        lastTs = ts;
+        angle += dt * Math.PI / 4;
+        gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+        rects.forEach(({ x , y , color  })=>{
+            matrixUtil.identity(uMatrix);
+            matrixUtil.scale(uMatrix, width, height);
+            matrixUtil.rotate(uMatrix, angle);
+            matrixUtil.translate(uMatrix, x + width / 2, y + height / 2);
+            gl.uniformMatrix3fv(uMatLocation, false, uMatrix);
+            gl.uniform4fv(uColorLocation, color);
+            gl.drawArrays(gl.TRIANGLES, 0, 6);
+        });
+        requestAnimationFrame(draw);
     }
+    requestAnimationFrame(draw);
     function rand(n) {
         return Math.floor(Math.random() * n);
     }
@@ -504,7 +544,7 @@ try {
     console.log(e.message);
 }
 
-},{"./utils/getContext":"bzbcp","./utils/createShader":"djIcq","./utils/createProgram":"itjX6","@parcel/transformer-js/src/esmodule-helpers.js":"JacNc"}],"bzbcp":[function(require,module,exports) {
+},{"./utils/getContext":"bzbcp","./utils/createShader":"djIcq","./utils/createProgram":"itjX6","./utils/Matrix":"8nDwv","@parcel/transformer-js/src/esmodule-helpers.js":"JacNc"}],"bzbcp":[function(require,module,exports) {
 var parcelHelpers = require("@parcel/transformer-js/src/esmodule-helpers.js");
 parcelHelpers.defineInteropFlag(exports);
 exports.default = (cnvSelector)=>{
@@ -570,6 +610,122 @@ exports.default = (gl, vertShader, fragShader)=>{
     if (!success) throw new Error(`Couldnt link shaders: ${gl.getProgramInfoLog(program)}`);
     return program;
 };
+
+},{"@parcel/transformer-js/src/esmodule-helpers.js":"JacNc"}],"8nDwv":[function(require,module,exports) {
+var parcelHelpers = require("@parcel/transformer-js/src/esmodule-helpers.js");
+parcelHelpers.defineInteropFlag(exports);
+class IMatrix {
+    static createPlain() {
+        return [
+            1,
+            0,
+            0,
+            0,
+            1,
+            0,
+            0,
+            0,
+            1
+        ];
+    }
+    static cast(mat) {
+        mat[0] = 1;
+        mat[1] = 0;
+        mat[2] = 0;
+        mat[3] = 0;
+        mat[4] = 1;
+        mat[5] = 0;
+        mat[6] = 0;
+        mat[7] = 0;
+        mat[8] = 1;
+        return mat;
+    }
+    constructor(){
+        this._mat = IMatrix.createPlain();
+    }
+    scaled(x, y = x) {
+        // transform operations on identity matrix return the same array by mutating (transforming) it everytime they are called
+        const mat = IMatrix.cast(this._mat);
+        mat[0] = x;
+        mat[4] = y;
+        return mat;
+    }
+    rotated(rad) {
+        const s = Math.sin(rad);
+        const c = Math.cos(rad);
+        const mat = IMatrix.cast(this._mat);
+        mat[0] = c;
+        mat[1] = s;
+        mat[3] = -s;
+        mat[4] = c;
+        return mat;
+    }
+    translated(x, y) {
+        const mat = IMatrix.cast(this._mat);
+        mat[6] = x;
+        mat[7] = y;
+        return mat;
+    }
+}
+class Matrix {
+    constructor(){
+        this.iMat = new IMatrix();
+        this.temp = IMatrix.createPlain();
+    }
+    create() {
+        return IMatrix.createPlain();
+    }
+    identity(mat) {
+        return IMatrix.cast(mat);
+    }
+    multiply(a, b) {
+        /**
+         * transpose(matA * matB) = transpose(matB) * transpose(matA)
+         */ /**       A                     B
+         *  _           _        _           _
+         * |             |      |             |
+         * |  0   1   2  |      |  0   1   2  |
+         * |  3   4   5  |  *   |  3   4   5  |
+         * |  6   7   8  |      |  6   7   8  |
+         * |_           _|      |_           _|
+         *                   =
+         * [
+         *      a[0] * b[0] + a[1] * b[3] + a[2] * b[6],
+         *      a[0] * b[1] + a[1] * b[4] + a[2] * b[7],
+         *      a[0] * b[2] + a[1] * b[5] + a[2] * b[8],
+         * 
+         *      a[3] * b[0] + a[4] * b[3] + a[5] * b[6],
+         *      a[3] * b[1] + a[4] * b[4] + a[5] * b[7],
+         *      a[3] * b[2] + a[4] * b[5] + a[5] * b[8],
+         * 
+         *      a[6] * b[0] + a[7] * b[3] + a[8] * b[6],
+         *      a[6] * b[1] + a[7] * b[4] + a[8] * b[7],
+         *      a[6] * b[2] + a[7] * b[5] + a[8] * b[8],
+         * ]
+         * 
+         */ const { temp  } = this;
+        temp[0] = a[0] * b[0] + a[1] * b[3] + a[2] * b[6];
+        temp[1] = a[0] * b[1] + a[1] * b[4] + a[2] * b[7];
+        temp[2] = a[0] * b[2] + a[1] * b[5] + a[2] * b[8];
+        temp[3] = a[3] * b[0] + a[4] * b[3] + a[5] * b[6];
+        temp[4] = a[3] * b[1] + a[4] * b[4] + a[5] * b[7];
+        temp[5] = a[3] * b[2] + a[4] * b[5] + a[5] * b[8];
+        temp[6] = a[6] * b[0] + a[7] * b[3] + a[8] * b[6];
+        temp[7] = a[6] * b[1] + a[7] * b[4] + a[8] * b[7];
+        temp[8] = a[6] * b[2] + a[7] * b[5] + a[8] * b[8];
+        for(let i = 0; i < 9; i++)a[i] = temp[i];
+    }
+    rotate(mat, rad) {
+        return this.multiply(mat, this.iMat.rotated(rad));
+    }
+    scale(mat, x, y) {
+        return this.multiply(mat, this.iMat.scaled(x, y));
+    }
+    translate(mat, x, y) {
+        return this.multiply(mat, this.iMat.translated(x, y));
+    }
+}
+exports.default = Matrix;
 
 },{"@parcel/transformer-js/src/esmodule-helpers.js":"JacNc"}]},["8Ye98","6cF5V"], "6cF5V", "parcelRequire889a")
 
