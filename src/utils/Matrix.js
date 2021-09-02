@@ -50,7 +50,7 @@ class IMatrix { // this is just an utility class that has to be instantiated for
 class Matrix {
     constructor() {
         this.iMat = new IMatrix()
-        this.temp = IMatrix.create()
+        this.temp = this.create()
     }
     create() {
         return IMatrix.create()
@@ -60,7 +60,7 @@ class Matrix {
     }
     multiply(a, b) { // a and b are expected in a transposed form
         /**
-         * transpose(matA * matB) = transpose(matB) * transpose(matA)
+         * transpose(matB * matA) = transpose(matA) * transpose(matB)
          */
         /**       A                     B
          *  _           _        _           _
