@@ -1,5 +1,5 @@
 class IMatrix { // this is just an utility class that has to be instantiated for use, because it holds a mutable field
-    static createPlain() {
+    static create() {
         return ([
             1, 0, 0,
             0, 1, 0,
@@ -19,11 +19,13 @@ class IMatrix { // this is just an utility class that has to be instantiated for
         return mat
     }
     constructor() {
-        this._mat = IMatrix.createPlain()
+        this.tMat = IMatrix.create()
+        this.sMat = IMatrix.create()
+        this.rMat = IMatrix.create()
     }
     scaled(x, y=x) { // returns a scaled identity matrix; this IMatrix class is meant to be used internally by this module alone
         // transform operations on identity matrix return the same array by mutating (transforming) it everytime they are called
-        const mat = IMatrix.cast(this._mat)
+        const mat = this.sMat
         mat[0] = x
         mat[4] = y
         return mat
@@ -31,7 +33,7 @@ class IMatrix { // this is just an utility class that has to be instantiated for
     rotated(rad) {
         const s = Math.sin(rad)
         const c = Math.cos(rad)
-        const mat = IMatrix.cast(this._mat)
+        const mat = this.rMat
         mat[0] = c
         mat[1] = s
         mat[3] = -s
@@ -39,7 +41,7 @@ class IMatrix { // this is just an utility class that has to be instantiated for
         return mat
     }
     translated(x, y) {
-        const mat = IMatrix.cast(this._mat)
+        const mat = this.tMat
         mat[6] = x
         mat[7] = y
         return mat
@@ -48,10 +50,10 @@ class IMatrix { // this is just an utility class that has to be instantiated for
 class Matrix {
     constructor() {
         this.iMat = new IMatrix()
-        this.temp = IMatrix.createPlain()
+        this.temp = IMatrix.create()
     }
     create() {
-        return IMatrix.createPlain()
+        return IMatrix.create()
     }
     identity(mat) { // cast into identity matrix
         return IMatrix.cast(mat)

@@ -615,7 +615,7 @@ exports.default = (gl, vertShader, fragShader)=>{
 var parcelHelpers = require("@parcel/transformer-js/src/esmodule-helpers.js");
 parcelHelpers.defineInteropFlag(exports);
 class IMatrix {
-    static createPlain() {
+    static create() {
         return [
             1,
             0,
@@ -641,11 +641,13 @@ class IMatrix {
         return mat;
     }
     constructor(){
-        this._mat = IMatrix.createPlain();
+        this.tMat = IMatrix.create();
+        this.sMat = IMatrix.create();
+        this.rMat = IMatrix.create();
     }
     scaled(x, y = x) {
         // transform operations on identity matrix return the same array by mutating (transforming) it everytime they are called
-        const mat = IMatrix.cast(this._mat);
+        const mat = this.sMat;
         mat[0] = x;
         mat[4] = y;
         return mat;
@@ -653,7 +655,7 @@ class IMatrix {
     rotated(rad) {
         const s = Math.sin(rad);
         const c = Math.cos(rad);
-        const mat = IMatrix.cast(this._mat);
+        const mat = this.rMat;
         mat[0] = c;
         mat[1] = s;
         mat[3] = -s;
@@ -661,7 +663,7 @@ class IMatrix {
         return mat;
     }
     translated(x, y) {
-        const mat = IMatrix.cast(this._mat);
+        const mat = this.tMat;
         mat[6] = x;
         mat[7] = y;
         return mat;
@@ -670,10 +672,10 @@ class IMatrix {
 class Matrix {
     constructor(){
         this.iMat = new IMatrix();
-        this.temp = IMatrix.createPlain();
+        this.temp = IMatrix.create();
     }
     create() {
-        return IMatrix.createPlain();
+        return IMatrix.create();
     }
     identity(mat) {
         return IMatrix.cast(mat);
