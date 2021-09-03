@@ -43,6 +43,7 @@ const image = new Image()
 image.src = texAtlasUrl
 image.onload = () => {
     try {
+        // setup variables
         const canvas = document.querySelector("#viewport")
         canvas.width = window.innerWidth
         canvas.height = window.innerHeight
@@ -52,6 +53,8 @@ image.onload = () => {
             createShader(gl, vertexShaderSrc, gl.VERTEX_SHADER),
             createShader(gl, fragShaderSrc, gl.FRAGMENT_SHADER)
         )
+
+        // webgl variables
         const aVertPosLocation = gl.getAttribLocation(program, "a_vert_pos")
         const aTexCoordsLocation = gl.getAttribLocation(program, "a_tex_coords")
         const uResLocation = gl.getUniformLocation(program, "u_resolution")
@@ -67,6 +70,7 @@ image.onload = () => {
         const texUnit = 0
         // const vao = gl.createVertexArray()
     
+        // initialization tasks
         gl.bindBuffer(gl.ARRAY_BUFFER, posBuffer)
         gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([
             -0.5, -0.5,
@@ -93,6 +97,11 @@ image.onload = () => {
         // gl.bindVertexArray(vao) // for our purpose, global vao suffices -- not having to use a custom vao should give some performance boost (albeit miniscule)
         gl.bindBuffer(gl.ARRAY_BUFFER, null)
 
+        // composite operation (blend-mode) setup (should be exposed)
+        gl.enable(gl.BLEND)
+        gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA)
+
+        // texture states setup (need to be executed as soon as texture atlas loads)
         gl.activeTexture(gl.TEXTURE0 + texUnit)
         gl.bindTexture(gl.TEXTURE_2D, texture)
         gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, image)
@@ -103,13 +112,15 @@ image.onload = () => {
         gl.generateMipmap(gl.TEXTURE_2D)
 
         gl.useProgram(program)
+        // clear canvas (needs to be exposed via API)
+        gl.clearColor(0, 0, 0, 1)
+        // viewport sync
         gl.viewport(0, 0, canvas.width, canvas.height)
         gl.uniform2f(uResLocation, canvas.width, canvas.height)
-        gl.clearColor(0, 0, 0, 1)
         
         let lastTs = 0
         let dt, angle = 0
-        const crate = { "x":514,"y":302,"rotation":0,"width":88,"height":88 }
+        const crate = {"x":606,"y":302,"rotation":0,"width":88,"height":88}
         const width = crate.width
         const height = crate.height
         const rects = Array(100).fill(0).map(() => {
@@ -125,6 +136,7 @@ image.onload = () => {
             // console.log(`FRAME RATE: ${1/dt}`)
             gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT)
             rects.forEach(({ x, y }) => {
+                // draw image function equivalent needs to be exposed as well
                 matrixUtil.identity(uMatrix)
                 matrixUtil.scale(uMatrix, width, height)
                 matrixUtil.rotate(uMatrix, angle)
