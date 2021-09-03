@@ -21,6 +21,10 @@ class Webgl2Renderer {
         gl.enable(gl.BLEND)
         gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA)
     }
+    resize() {
+        gl.viewport(0, 0, canvas.width, canvas.height)
+        gl.uniform2f(uResLocation, canvas.width, canvas.height)
+    }
     drawFrame(srcX, srcY, width, height, destX, destY, angle) {
         const { matrixUtil, uMatrix, uTexMatrix, texUnit, uMatLocation, uTexMatLocation, uTexUnitLocation } = this
         matrixUtil.identity(uMatrix)

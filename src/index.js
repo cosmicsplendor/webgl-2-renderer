@@ -71,6 +71,7 @@ image.onload = () => {
         // const vao = gl.createVertexArray()
     
         // initialization tasks
+        gl.uniform1i(uTexUnitLocation, texUnit)
         gl.bindBuffer(gl.ARRAY_BUFFER, posBuffer)
         gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([
             -0.5, -0.5,
@@ -148,7 +149,6 @@ image.onload = () => {
 
                 gl.uniformMatrix3fv(uMatLocation, false, uMatrix)
                 gl.uniformMatrix3fv(uTexMatLocation, false, uTexMatrix)
-                gl.uniform1i(uTexUnitLocation, texUnit)
                 gl.drawArrays(gl.TRIANGLES, 0, 6)
             })
             requestAnimationFrame(draw)

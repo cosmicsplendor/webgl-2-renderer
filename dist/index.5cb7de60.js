@@ -494,6 +494,7 @@ image.onload = ()=>{
         const texUnit = 0;
         // const vao = gl.createVertexArray()
         // initialization tasks
+        gl.uniform1i(uTexUnitLocation, texUnit);
         gl.bindBuffer(gl.ARRAY_BUFFER, posBuffer);
         gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([
             -0.5,
@@ -582,7 +583,6 @@ image.onload = ()=>{
                 matrixUtil.translate(uTexMatrix, crate.x / image.width, crate.y / image.height);
                 gl.uniformMatrix3fv(uMatLocation, false, uMatrix);
                 gl.uniformMatrix3fv(uTexMatLocation, false, uTexMatrix);
-                gl.uniform1i(uTexUnitLocation, texUnit);
                 gl.drawArrays(gl.TRIANGLES, 0, 6);
             });
             requestAnimationFrame(draw);
