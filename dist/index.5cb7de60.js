@@ -466,7 +466,11 @@ const viewport = {
 const image = new Image();
 image.src = texAtlasUrl;
 image.addEventListener("load", ()=>{
-    const renderer = new _webgl2RendererDefault.default(image, "#viewport", viewport);
+    const renderer = new _webgl2RendererDefault.default({
+        image,
+        cnvQry: "#viewport",
+        viewport
+    });
     const frame = {
         "x": 606,
         "y": 302,
@@ -546,7 +550,7 @@ var _fragmentShaderDefault = parcelHelpers.interopDefault(_fragmentShader);
 var _matrix = require("./utils/Matrix");
 var _matrixDefault = parcelHelpers.interopDefault(_matrix);
 class Webgl2Renderer {
-    constructor(image, cnvQry = "#viewport", viewport){
+    constructor({ image , cnvQry ="#viewport" , viewport  }){
         const gl = _getContextDefault.default(cnvQry);
         const program = _createProgramDefault.default(gl, _createShaderDefault.default(gl, _vertexShaderDefault.default, gl.VERTEX_SHADER), _createShaderDefault.default(gl, _fragmentShaderDefault.default, gl.FRAGMENT_SHADER));
         this.canvas = document.querySelector(cnvQry);

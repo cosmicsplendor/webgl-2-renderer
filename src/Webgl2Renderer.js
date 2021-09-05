@@ -6,7 +6,7 @@ import fragShaderSrc from "./shaders/fragmentShader"
 import MatrixUtil from "./utils/Matrix"
 
 class Webgl2Renderer {
-    constructor(image, cnvQry="#viewport", viewport) {
+    constructor({ image, cnvQry="#viewport", viewport }) {
         const gl = getContext(cnvQry)
         const program = createProgram(
             gl,
