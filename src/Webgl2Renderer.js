@@ -6,14 +6,16 @@ import fragShaderSrc from "./shaders/fragmentShader"
 import MatrixUtil from "./utils/Matrix"
 
 class Webgl2Renderer {
-    constructor(image, canvId="#viewport", viewport) {
-        this.gl = getContext(canvId)
-        this.program = createProgram(
+    constructor(image, cnvQry="#viewport", viewport) {
+        const gl = getContext(cnvQry)
+        const program = createProgram(
             gl,
             createShader(gl, vertexShaderSrc, gl.VERTEX_SHADER),
             createShader(gl, fragShaderSrc, gl.FRAGMENT_SHADER)
         )
+        this.canvas = document.querySelector(cnvQry)
         this.image = image
+        this.gl = gl
 
         // webgl uniforms, attributes and buffers
         const aVertPosLocation = gl.getAttribLocation(program, "a_vert_pos")
@@ -25,8 +27,8 @@ class Webgl2Renderer {
         this.uMatLocation = gl.getUniformLocation(program, "u_matrix")
         this.uTexMatLocation = gl.getUniformLocation(program, "u_tex_matrix")
         this.matrixUtil = new MatrixUtil()
-        this.uMatrix = matrixUtil.create() // identity matrix
-        this.uTexMatrix = matrixUtil.create()
+        this.uMatrix = this.matrixUtil.create() // identity matrix
+        this.uTexMatrix = this.matrixUtil.create()
         
         // texture and position attributes initialization tasks
         gl.bindBuffer(gl.ARRAY_BUFFER, posBuffer)
@@ -58,8 +60,9 @@ class Webgl2Renderer {
         const texture = gl.createTexture()
         const uTexUnitLocation = gl.getUniformLocation(program, "u_tex_unit")
         const texUnit = 0
-        gl.uniform1i(uTexUnitLocation, texUnit)
+        gl.useProgram(program)
         gl.activeTexture(gl.TEXTURE0 + texUnit)
+        gl.uniform1i(uTexUnitLocation, texUnit)
         gl.bindTexture(gl.TEXTURE_2D, texture)
         gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, image)
         gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE)
@@ -68,28 +71,32 @@ class Webgl2Renderer {
         gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR)
         gl.generateMipmap(gl.TEXTURE_2D)
         
-        gl.useProgram(program)
         this.blendMode = "source-over"
-        this.resize()
-        this.clear()
-        viewport.on("change", this.resize.bind(this))
+        this.resize(viewport)
+        this.clearColor = [ 0, 0, 0, 1 ]
+        // viewport.on("change", this.resize.bind(this))
     }
-    set clear() {
-        this.gl.clearColor(0, 0, 0, 0)
+    set clearColor(arr) {
+        this.gl.clearColor(...arr)
     }
     set blendMode(val) {
         switch(val) {
             default:
-                this.gl.enable(gl.BLEND)
-                this.gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA)
+                this.gl.enable(this.gl.BLEND)
+                this.gl.blendFunc(this.gl.SRC_ALPHA, this.gl.ONE_MINUS_SRC_ALPHA)
         }
     }
+    clear() {
+        this.gl.clear(this.gl.COLOR_BUFFER_BIT | this.gl.DEPTH_BUFFER_BIT)
+    }
     resize({ width, height }) {
+        this.canvas.width = width
+        this.canvas.height = height
         this.gl.viewport(0, 0, width, height)
         this.gl.uniform2f(this.uResLocation, width, height)
     }
     drawFrame(srcX, srcY, width, height, destX, destY, angle) {
-        const { matrixUtil, uMatrix, uTexMatrix, uMatLocation, uTexMatLocation, image } = this
+        const { matrixUtil, uMatrix, uTexMatrix, uMatLocation, uTexMatLocation, image, gl } = this
         matrixUtil.identity(uMatrix)
         matrixUtil.scale(uMatrix, width, height)
         angle && matrixUtil.rotate(uMatrix, angle)

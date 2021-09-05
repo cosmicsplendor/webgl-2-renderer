@@ -456,45 +456,115 @@ function hmrAcceptRun(bundle, id) {
 
 },{}],"6cF5V":[function(require,module,exports) {
 var parcelHelpers = require("@parcel/transformer-js/src/esmodule-helpers.js");
+var _webgl2Renderer = require("./Webgl2Renderer");
+var _webgl2RendererDefault = parcelHelpers.interopDefault(_webgl2Renderer);
+const texAtlasUrl = "http://localhost:1234/texatlas.png";
+const viewport = {
+    width: window.innerWidth,
+    height: window.innerHeight
+};
+const image = new Image();
+image.src = texAtlasUrl;
+image.addEventListener("load", ()=>{
+    const renderer = new _webgl2RendererDefault.default(image, "#viewport", viewport);
+    const frame = {
+        "x": 606,
+        "y": 302,
+        "rotation": 0,
+        "width": 88,
+        "height": 88
+    };
+    const rand = (n)=>Math.floor(Math.random() * n)
+    ;
+    const rects = Array(100).fill(0).map(()=>{
+        return {
+            x: rand(renderer.canvas.width - frame.width),
+            y: rand(renderer.canvas.height - frame.height)
+        };
+    });
+    let lastTs = 0;
+    let dt, angle = 0;
+    const start = (ts)=>{
+        dt = (ts - lastTs) / 1000;
+        lastTs = ts;
+        angle += dt * Math.PI / 4;
+        // console.log(`FRAME RATE: ${1/dt}`)
+        renderer.clear();
+        rects.forEach(({ x , y  })=>{
+            renderer.drawFrame(frame.x, frame.y, frame.width, frame.height, x, y, angle);
+        });
+        requestAnimationFrame(start);
+    };
+    requestAnimationFrame(start);
+});
+
+},{"@parcel/transformer-js/src/esmodule-helpers.js":"JacNc","./Webgl2Renderer":"ekYp1"}],"JacNc":[function(require,module,exports) {
+exports.interopDefault = function(a) {
+    return a && a.__esModule ? a : {
+        default: a
+    };
+};
+exports.defineInteropFlag = function(a) {
+    Object.defineProperty(a, '__esModule', {
+        value: true
+    });
+};
+exports.exportAll = function(source, dest) {
+    Object.keys(source).forEach(function(key) {
+        if (key === 'default' || key === '__esModule') return;
+        // Skip duplicate re-exports when they have the same value.
+        if (key in dest && dest[key] === source[key]) return;
+        Object.defineProperty(dest, key, {
+            enumerable: true,
+            get: function() {
+                return source[key];
+            }
+        });
+    });
+    return dest;
+};
+exports.export = function(dest, destName, get) {
+    Object.defineProperty(dest, destName, {
+        enumerable: true,
+        get: get
+    });
+};
+
+},{}],"ekYp1":[function(require,module,exports) {
+var parcelHelpers = require("@parcel/transformer-js/src/esmodule-helpers.js");
+parcelHelpers.defineInteropFlag(exports);
 var _getContext = require("./utils/getContext");
 var _getContextDefault = parcelHelpers.interopDefault(_getContext);
 var _createShader = require("./utils/createShader");
 var _createShaderDefault = parcelHelpers.interopDefault(_createShader);
 var _createProgram = require("./utils/createProgram");
 var _createProgramDefault = parcelHelpers.interopDefault(_createProgram);
+var _vertexShader = require("./shaders/vertexShader");
+var _vertexShaderDefault = parcelHelpers.interopDefault(_vertexShader);
+var _fragmentShader = require("./shaders/fragmentShader");
+var _fragmentShaderDefault = parcelHelpers.interopDefault(_fragmentShader);
 var _matrix = require("./utils/Matrix");
 var _matrixDefault = parcelHelpers.interopDefault(_matrix);
-const texAtlasUrl = "http://localhost:1234/texatlas.png";
-const vertexShaderSrc = `   #version 300 es\n\n    in vec2 a_vert_pos;\n    in vec2 a_tex_coords;\n    \n    uniform vec2 u_resolution;\n    uniform mat3 u_matrix;\n    uniform mat3 u_tex_matrix;\n\n    out vec2 v_tex_coords;\n\n    void main() {\n        \n        v_tex_coords = (u_tex_matrix * vec3(a_tex_coords, 1)).xy;\n        \n        vec2 pos_vec = (u_matrix * vec3(a_vert_pos, 1)).xy;\n\n        // converting to clipspace\n        vec2 normalized = pos_vec / u_resolution;\n        vec2 clipspace = (normalized * 2.0) - 1.0;\n        gl_Position = vec4(clipspace * vec2(1, -1), 0, 1);\n    }\n`;
-const fragShaderSrc = `   #version 300 es\n    precision highp float;\n\n    in vec2 v_tex_coords;\n    uniform sampler2D u_tex_unit;\n    out vec4 out_color;\n    void main() {\n        out_color = texture(u_tex_unit, v_tex_coords);\n    }\n`;
-const image = new Image();
-image.src = texAtlasUrl;
-image.onload = ()=>{
-    try {
-        // setup variables
-        const canvas = document.querySelector("#viewport");
-        canvas.width = window.innerWidth;
-        canvas.height = window.innerHeight;
-        const gl = _getContextDefault.default("#viewport");
-        const program = _createProgramDefault.default(gl, _createShaderDefault.default(gl, vertexShaderSrc, gl.VERTEX_SHADER), _createShaderDefault.default(gl, fragShaderSrc, gl.FRAGMENT_SHADER));
-        // webgl variables
+class Webgl2Renderer {
+    constructor(image, cnvQry = "#viewport", viewport){
+        const gl = _getContextDefault.default(cnvQry);
+        const program = _createProgramDefault.default(gl, _createShaderDefault.default(gl, _vertexShaderDefault.default, gl.VERTEX_SHADER), _createShaderDefault.default(gl, _fragmentShaderDefault.default, gl.FRAGMENT_SHADER));
+        this.canvas = document.querySelector(cnvQry);
+        this.image = image;
+        this.gl = gl;
+        // webgl uniforms, attributes and buffers
         const aVertPosLocation = gl.getAttribLocation(program, "a_vert_pos");
         const aTexCoordsLocation = gl.getAttribLocation(program, "a_tex_coords");
-        const uResLocation = gl.getUniformLocation(program, "u_resolution");
-        const uMatLocation = gl.getUniformLocation(program, "u_matrix");
-        const uTexMatLocation = gl.getUniformLocation(program, "u_tex_matrix");
-        const uTexUnitLocation = gl.getUniformLocation(program, "u_tex_unit");
         const posBuffer = gl.createBuffer();
         const texBuffer = gl.createBuffer();
-        const texture = gl.createTexture();
-        const matrixUtil = new _matrixDefault.default();
-        const uMatrix = matrixUtil.create() // identity matrix
+        this.uResLocation = gl.getUniformLocation(program, "u_resolution");
+        this.uMatLocation = gl.getUniformLocation(program, "u_matrix");
+        this.uTexMatLocation = gl.getUniformLocation(program, "u_tex_matrix");
+        this.matrixUtil = new _matrixDefault.default();
+        this.uMatrix = this.matrixUtil.create() // identity matrix
         ;
-        const uTexMatrix = matrixUtil.create();
-        const texUnit = 0;
-        // const vao = gl.createVertexArray()
-        // initialization tasks
-        gl.uniform1i(uTexUnitLocation, texUnit);
+        this.uTexMatrix = this.matrixUtil.create();
+        // texture and position attributes initialization tasks
         gl.bindBuffer(gl.ARRAY_BUFFER, posBuffer);
         gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([
             -0.5,
@@ -529,13 +599,14 @@ image.onload = ()=>{
         ]), gl.STATIC_DRAW);
         gl.enableVertexAttribArray(aTexCoordsLocation);
         gl.vertexAttribPointer(aTexCoordsLocation, 2, gl.FLOAT, true, 0, 0);
-        // gl.bindVertexArray(vao) // for our purpose, global vao suffices -- not having to use a custom vao should give some performance boost (albeit miniscule)
         gl.bindBuffer(gl.ARRAY_BUFFER, null);
-        // composite operation (blend-mode) setup (should be exposed)
-        gl.enable(gl.BLEND);
-        gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
-        // texture states setup (need to be executed as soon as texture atlas loads)
+        // texture states setup
+        const texture = gl.createTexture();
+        const uTexUnitLocation = gl.getUniformLocation(program, "u_tex_unit");
+        const texUnit = 0;
+        gl.useProgram(program);
         gl.activeTexture(gl.TEXTURE0 + texUnit);
+        gl.uniform1i(uTexUnitLocation, texUnit);
         gl.bindTexture(gl.TEXTURE_2D, texture);
         gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, image);
         gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
@@ -543,60 +614,53 @@ image.onload = ()=>{
         gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
         gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
         gl.generateMipmap(gl.TEXTURE_2D);
-        gl.useProgram(program);
-        // clear canvas (needs to be exposed via API)
-        gl.clearColor(0, 0, 0, 1);
-        // viewport sync
-        gl.viewport(0, 0, canvas.width, canvas.height);
-        gl.uniform2f(uResLocation, canvas.width, canvas.height);
-        let lastTs = 0;
-        let dt, angle = 0;
-        const crate = {
-            "x": 606,
-            "y": 302,
-            "rotation": 0,
-            "width": 88,
-            "height": 88
-        };
-        const width = crate.width;
-        const height = crate.height;
-        const rects = Array(100).fill(0).map(()=>{
-            return {
-                x: rand(canvas.width - width),
-                y: rand(canvas.height - height)
-            };
-        });
-        function draw(ts) {
-            dt = (ts - lastTs) / 1000;
-            lastTs = ts;
-            angle += dt * Math.PI / 4;
-            // console.log(`FRAME RATE: ${1/dt}`)
-            gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
-            rects.forEach(({ x , y  })=>{
-                // draw image function equivalent needs to be exposed as well
-                matrixUtil.identity(uMatrix);
-                matrixUtil.scale(uMatrix, width, height);
-                matrixUtil.rotate(uMatrix, angle);
-                matrixUtil.translate(uMatrix, x + width / 2, y + height / 2);
-                matrixUtil.identity(uTexMatrix);
-                matrixUtil.scale(uTexMatrix, width / image.width, height / image.height);
-                matrixUtil.translate(uTexMatrix, crate.x / image.width, crate.y / image.height);
-                gl.uniformMatrix3fv(uMatLocation, false, uMatrix);
-                gl.uniformMatrix3fv(uTexMatLocation, false, uTexMatrix);
-                gl.drawArrays(gl.TRIANGLES, 0, 6);
-            });
-            requestAnimationFrame(draw);
-        }
-        requestAnimationFrame(draw);
-        function rand(n) {
-            return Math.floor(Math.random() * n);
-        }
-    } catch (e) {
-        console.log(e.message);
+        this.blendMode = "source-over";
+        this.resize(viewport);
+        this.clearColor = [
+            0,
+            0,
+            0,
+            1
+        ];
+    // viewport.on("change", this.resize.bind(this))
     }
-};
+    set clearColor(arr) {
+        this.gl.clearColor(...arr);
+    }
+    set blendMode(val) {
+        this.gl.enable(this.gl.BLEND);
+        this.gl.blendFunc(this.gl.SRC_ALPHA, this.gl.ONE_MINUS_SRC_ALPHA);
+    }
+    clear() {
+        this.gl.clear(this.gl.COLOR_BUFFER_BIT | this.gl.DEPTH_BUFFER_BIT);
+    }
+    resize({ width , height  }) {
+        this.canvas.width = width;
+        this.canvas.height = height;
+        this.gl.viewport(0, 0, width, height);
+        this.gl.uniform2f(this.uResLocation, width, height);
+    }
+    drawFrame(srcX, srcY, width, height, destX, destY, angle) {
+        const { matrixUtil , uMatrix , uTexMatrix , uMatLocation , uTexMatLocation , image: image1 , gl: gl1  } = this;
+        matrixUtil.identity(uMatrix);
+        matrixUtil.scale(uMatrix, width, height);
+        angle && matrixUtil.rotate(uMatrix, angle);
+        matrixUtil.translate(uMatrix, destX + width / 2, destY + height / 2);
+        matrixUtil.identity(uTexMatrix);
+        matrixUtil.scale(uTexMatrix, width / image1.width, height / image1.height);
+        matrixUtil.translate(uTexMatrix, srcX / image1.width, srcY / image1.height);
+        gl1.uniformMatrix3fv(uMatLocation, false, uMatrix);
+        gl1.uniformMatrix3fv(uTexMatLocation, false, uTexMatrix);
+        gl1.drawArrays(gl1.TRIANGLES, 0, 6);
+    }
+    render() {
+    }
+    renderRec() {
+    }
+}
+exports.default = Webgl2Renderer;
 
-},{"./utils/getContext":"bzbcp","./utils/createShader":"djIcq","./utils/createProgram":"itjX6","./utils/Matrix":"8nDwv","@parcel/transformer-js/src/esmodule-helpers.js":"JacNc"}],"bzbcp":[function(require,module,exports) {
+},{"./utils/getContext":"bzbcp","./utils/createShader":"djIcq","./utils/createProgram":"itjX6","./shaders/vertexShader":"7S0u1","./shaders/fragmentShader":"aXirM","./utils/Matrix":"8nDwv","@parcel/transformer-js/src/esmodule-helpers.js":"JacNc"}],"bzbcp":[function(require,module,exports) {
 var parcelHelpers = require("@parcel/transformer-js/src/esmodule-helpers.js");
 parcelHelpers.defineInteropFlag(exports);
 exports.default = (cnvSelector)=>{
@@ -606,39 +670,7 @@ exports.default = (cnvSelector)=>{
     return gl;
 };
 
-},{"@parcel/transformer-js/src/esmodule-helpers.js":"JacNc"}],"JacNc":[function(require,module,exports) {
-exports.interopDefault = function(a) {
-    return a && a.__esModule ? a : {
-        default: a
-    };
-};
-exports.defineInteropFlag = function(a) {
-    Object.defineProperty(a, '__esModule', {
-        value: true
-    });
-};
-exports.exportAll = function(source, dest) {
-    Object.keys(source).forEach(function(key) {
-        if (key === 'default' || key === '__esModule') return;
-        // Skip duplicate re-exports when they have the same value.
-        if (key in dest && dest[key] === source[key]) return;
-        Object.defineProperty(dest, key, {
-            enumerable: true,
-            get: function() {
-                return source[key];
-            }
-        });
-    });
-    return dest;
-};
-exports.export = function(dest, destName, get) {
-    Object.defineProperty(dest, destName, {
-        enumerable: true,
-        get: get
-    });
-};
-
-},{}],"djIcq":[function(require,module,exports) {
+},{"@parcel/transformer-js/src/esmodule-helpers.js":"JacNc"}],"djIcq":[function(require,module,exports) {
 var parcelHelpers = require("@parcel/transformer-js/src/esmodule-helpers.js");
 parcelHelpers.defineInteropFlag(exports);
 exports.default = (gl, shaderSrc, shaderType)=>{
@@ -662,6 +694,16 @@ exports.default = (gl, vertShader, fragShader)=>{
     if (!success) throw new Error(`Couldnt link shaders: ${gl.getProgramInfoLog(program)}`);
     return program;
 };
+
+},{"@parcel/transformer-js/src/esmodule-helpers.js":"JacNc"}],"7S0u1":[function(require,module,exports) {
+var parcelHelpers = require("@parcel/transformer-js/src/esmodule-helpers.js");
+parcelHelpers.defineInteropFlag(exports);
+exports.default = vertexShaderSrc = `   #version 300 es\n\n    in vec2 a_vert_pos;\n    in vec2 a_tex_coords;\n    \n    uniform vec2 u_resolution;\n    uniform mat3 u_matrix;\n    uniform mat3 u_tex_matrix;\n\n    out vec2 v_tex_coords;\n\n    void main() {\n        \n        v_tex_coords = (u_tex_matrix * vec3(a_tex_coords, 1)).xy;\n        \n        vec2 pos_vec = (u_matrix * vec3(a_vert_pos, 1)).xy;\n\n        // converting to clipspace\n        vec2 normalized = pos_vec / u_resolution;\n        vec2 clipspace = (normalized * 2.0) - 1.0;\n        gl_Position = vec4(clipspace * vec2(1, -1), 0, 1);\n    }\n`;
+
+},{"@parcel/transformer-js/src/esmodule-helpers.js":"JacNc"}],"aXirM":[function(require,module,exports) {
+var parcelHelpers = require("@parcel/transformer-js/src/esmodule-helpers.js");
+parcelHelpers.defineInteropFlag(exports);
+exports.default = fragShaderSrc = `   #version 300 es\n    precision highp float;\n\n    in vec2 v_tex_coords;\n    uniform sampler2D u_tex_unit;\n    out vec4 out_color;\n    void main() {\n        out_color = texture(u_tex_unit, v_tex_coords);\n    }\n`;
 
 },{"@parcel/transformer-js/src/esmodule-helpers.js":"JacNc"}],"8nDwv":[function(require,module,exports) {
 var parcelHelpers = require("@parcel/transformer-js/src/esmodule-helpers.js");
