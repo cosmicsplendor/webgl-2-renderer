@@ -1,4 +1,4 @@
-class IMatrix { // this is just an utility class that has to be instantiated for use, because it holds a mutable field
+export class IMatrix { // this is just an utility class that has to be instantiated for use, because it holds a mutable field
     static create() {
         return ([
             1, 0, 0,

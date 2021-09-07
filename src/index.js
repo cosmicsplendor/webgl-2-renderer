@@ -25,7 +25,7 @@ image.addEventListener("load", () => {
         // console.log(`FRAME RATE: ${1/dt}`)
         renderer.clear()
         rects.forEach(({ x, y }) => {
-            renderer.drawFrame(frame.x, frame.y, frame.width, frame.height, x, y, angle)
+            renderer.render(frame.x, frame.y, frame.width, frame.height, x, y, angle)
         })
         requestAnimationFrame(start)
     }

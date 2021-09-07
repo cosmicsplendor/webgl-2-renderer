@@ -89,17 +89,42 @@ class Webgl2Renderer {
     clear() {
         this.gl.clear(this.gl.COLOR_BUFFER_BIT | this.gl.DEPTH_BUFFER_BIT)
     }
+    changeBackground(bgColor) {
+        this.canvas.style.background = bgColor
+    }
     resize({ width, height }) {
         this.canvas.width = width
         this.canvas.height = height
         this.gl.viewport(0, 0, width, height)
         this.gl.uniform2f(this.uResLocation, width, height)
     }
-    drawFrame(srcX, srcY, width, height, destX, destY, angle) {
+    render(node) {
+        if (node.type !== "RECT") { return }
+        const srcX = node.meta.x
+        const srcY = node.meta.y
+        const width = node.w
+        const height = node.h
+        const destX = node.pos.x
+        const destY = node.pos.y
+        const rotation = node.rotation
+        const anchor = node.anchor
+        const initialRotation = node.initialRotation
+        const initialPivotX = node.initialPivotX
+
+
         const { matrixUtil, uMatrix, uTexMatrix, uMatLocation, uTexMatLocation, image, gl } = this
+
         matrixUtil.identity(uMatrix)
         matrixUtil.scale(uMatrix, width, height)
-        angle && matrixUtil.rotate(uMatrix, angle)
+        if (node.initialRotation) {
+            matrixUtil.rotate(initialRotation)
+            matrixUtil.translate(initialPivotX, 0)
+        }
+        if (rotation) {
+            anchor && matrixUtil.translate(anchor.x - width / 2, anchor.y - height / 2)
+            matrixUtil.rotate(uMatrix, rotation)
+            anchor && matrixUtil.translate(-(anchor.x - width / 2), -(anchor.y - height / 2))
+        }
         matrixUtil.translate(uMatrix, destX + (width / 2), destY + (height / 2))
 
         matrixUtil.identity(uTexMatrix)
@@ -109,9 +134,6 @@ class Webgl2Renderer {
         gl.uniformMatrix3fv(uMatLocation, false, uMatrix)
         gl.uniformMatrix3fv(uTexMatLocation, false, uTexMatrix)
         gl.drawArrays(gl.TRIANGLES, 0, 6)
-    }
-    render() {
-
     }
     renderRec() {
 
