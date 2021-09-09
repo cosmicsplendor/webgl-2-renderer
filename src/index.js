@@ -23,8 +23,8 @@ image.addEventListener("load", () => {
             h: frame.height,
             rotation: 0,
             anchor: {
-                x: -frame.width / 2,
-                y: -frame.height / 2
+                x: frame.width / 2,
+                y: frame.height / 2
             }
         }
     })

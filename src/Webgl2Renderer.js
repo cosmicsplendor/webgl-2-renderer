@@ -124,9 +124,9 @@ class Webgl2Renderer {
             this.translate(initialPivotX, 0)
         }
         if (rotation) {
-            anchor && this.translate(anchor.x, anchor.y)
-            this.rotate(rotation)
             anchor && this.translate(-anchor.x, -anchor.y)
+            this.rotate(rotation)
+            anchor && this.translate(anchor.x, anchor.y)
         }
         this.translate(destX, destY)
 

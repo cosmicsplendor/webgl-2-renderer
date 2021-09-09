@@ -494,8 +494,8 @@ image.addEventListener("load", ()=>{
             h: frame.height,
             rotation: 0,
             anchor: {
-                x: -frame.width / 2,
-                y: -frame.height / 2
+                x: frame.width / 2,
+                y: frame.height / 2
             }
         };
     });
@@ -678,9 +678,9 @@ class Webgl2Renderer {
             this.translate(initialPivotX, 0);
         }
         if (rotation) {
-            anchor && this.translate(anchor.x, anchor.y);
-            this.rotate(rotation);
             anchor && this.translate(-anchor.x, -anchor.y);
+            this.rotate(rotation);
+            anchor && this.translate(anchor.x, anchor.y);
         }
         this.translate(destX, destY);
         matrixUtil.identity(uTexMatrix);
@@ -717,7 +717,7 @@ class Webgl2Renderer {
 }
 exports.default = Webgl2Renderer;
 
-},{"./utils/getContext":"bzbcp","./utils/createShader":"djIcq","./utils/createProgram":"itjX6","./shaders/vertexShader":"7S0u1","./shaders/fragmentShader":"aXirM","./utils/Matrix":"8nDwv","@parcel/transformer-js/src/esmodule-helpers.js":"JacNc","./utils/StateStack":"9JhPw"}],"bzbcp":[function(require,module,exports) {
+},{"@parcel/transformer-js/src/esmodule-helpers.js":"JacNc","./utils/getContext":"bzbcp","./utils/createShader":"djIcq","./utils/createProgram":"itjX6","./shaders/vertexShader":"7S0u1","./shaders/fragmentShader":"aXirM","./utils/Matrix":"8nDwv","./utils/StateStack":"9JhPw"}],"bzbcp":[function(require,module,exports) {
 var parcelHelpers = require("@parcel/transformer-js/src/esmodule-helpers.js");
 parcelHelpers.defineInteropFlag(exports);
 exports.default = (cnvSelector)=>{
