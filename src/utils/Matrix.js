@@ -95,7 +95,6 @@ class Matrix {
         temp[6] = a[6] * b[0] + a[7] * b[3] + a[8] * b[6]
         temp[7] = a[6] * b[1] + a[7] * b[4] + a[8] * b[7]
         temp[8] = a[6] * b[2] + a[7] * b[5] + a[8] * b[8]
-
         for (let i = 0; i < 9; i++) {
             a[i] = temp[i]
         }
@@ -110,8 +109,8 @@ class Matrix {
         return this.multiply(
             mat,
             this.iMat.scaled(x, y)
-        )
-    }
+            )
+        }
     translate(mat, x, y) {
         return this.multiply(
             mat,

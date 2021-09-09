@@ -4,6 +4,7 @@ import createProgram from "./utils/createProgram"
 import vertexShaderSrc from "./shaders/vertexShader"
 import fragShaderSrc from "./shaders/fragmentShader"
 import MatrixUtil from "./utils/Matrix"
+import StateStack from "./utils/StateStack"
 
 class Webgl2Renderer {
     constructor({ image, cnvQry="#viewport", viewport }) {
@@ -27,18 +28,17 @@ class Webgl2Renderer {
         this.uMatLocation = gl.getUniformLocation(program, "u_matrix")
         this.uTexMatLocation = gl.getUniformLocation(program, "u_tex_matrix")
         this.matrixUtil = new MatrixUtil()
-        this.uMatrix = this.matrixUtil.create() // identity matrix
-        this.uTexMatrix = this.matrixUtil.create()
+        this.uTexMatrix = this.matrixUtil.create() // identity matrix
         
         // texture and position attributes initialization tasks
         gl.bindBuffer(gl.ARRAY_BUFFER, posBuffer)
         gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([
-            -0.5, -0.5,
-            0.5, -0.5,
-            -0.5, 0.5,
-            0.5, -0.5,
-            0.5, 0.5,
-            -0.5, 0.5
+            0, 0,
+            1, 0,
+            0, 1,
+            1, 0,
+            1, 1,
+            0, 1
         ]), gl.STATIC_DRAW)
         gl.enableVertexAttribArray(aVertPosLocation)
         gl.vertexAttribPointer(aVertPosLocation, 2, gl.FLOAT, false, 0, 0)
@@ -74,6 +74,7 @@ class Webgl2Renderer {
         this.blendMode = "source-over"
         this.resize(viewport)
         this.clearColor = [ 0, 0, 0, 1 ]
+        this.stateStack = new StateStack()
         // viewport.on("change", this.resize.bind(this))
     }
     set clearColor(arr) {
@@ -85,6 +86,21 @@ class Webgl2Renderer {
                 this.gl.enable(this.gl.BLEND)
                 this.gl.blendFunc(this.gl.SRC_ALPHA, this.gl.ONE_MINUS_SRC_ALPHA)
         }
+    }
+    translate(x, y) {
+        this.matrixUtil.translate(this.stateStack.active.mat, x, y)
+    }
+    rotate(rad) {
+        this.matrixUtil.rotate(this.stateStack.active.mat, rad)
+    }
+    scale(x, y) {
+        this.matrixUtil.scale(this.stateStack.active.mat, x, y)
+    }
+    save() {
+        this.stateStack.save()
+    }
+    restore() {
+        this.stateStack.restore()
     }
     clear() {
         this.gl.clear(this.gl.COLOR_BUFFER_BIT | this.gl.DEPTH_BUFFER_BIT)
@@ -99,7 +115,7 @@ class Webgl2Renderer {
         this.gl.uniform2f(this.uResLocation, width, height)
     }
     render(node) {
-        if (node.type !== "RECT") { return }
+        if (node.type !== "TEXTURE") { return }
         const srcX = node.meta.x
         const srcY = node.meta.y
         const width = node.w
@@ -112,28 +128,30 @@ class Webgl2Renderer {
         const initialPivotX = node.initialPivotX
 
 
-        const { matrixUtil, uMatrix, uTexMatrix, uMatLocation, uTexMatLocation, image, gl } = this
+        const { matrixUtil, uTexMatrix, uMatLocation, uTexMatLocation, image, gl } = this
+        this.save()
 
-        matrixUtil.identity(uMatrix)
-        matrixUtil.scale(uMatrix, width, height)
+        this.scale(width, height)
         if (node.initialRotation) {
-            matrixUtil.rotate(initialRotation)
-            matrixUtil.translate(initialPivotX, 0)
+            this.rotate(initialRotation)
+            this.translate(initialPivotX, 0)
         }
         if (rotation) {
-            anchor && matrixUtil.translate(anchor.x - width / 2, anchor.y - height / 2)
-            matrixUtil.rotate(uMatrix, rotation)
-            anchor && matrixUtil.translate(-(anchor.x - width / 2), -(anchor.y - height / 2))
+            anchor && this.translate(anchor.x, anchor.y)
+            this.rotate(rotation)
+            anchor && this.translate(-anchor.x, -anchor.y)
         }
-        matrixUtil.translate(uMatrix, destX + (width / 2), destY + (height / 2))
+        this.translate(destX, destY)
 
         matrixUtil.identity(uTexMatrix)
         matrixUtil.scale(uTexMatrix, width / image.width, height / image.height)
         matrixUtil.translate(uTexMatrix, srcX / image.width, srcY / image.height)
 
-        gl.uniformMatrix3fv(uMatLocation, false, uMatrix)
+        gl.uniformMatrix3fv(uMatLocation, false, this.stateStack.active.mat)
         gl.uniformMatrix3fv(uTexMatLocation, false, uTexMatrix)
         gl.drawArrays(gl.TRIANGLES, 0, 6)
+
+        this.restore()
     }
     renderRec() {
 

@@ -480,23 +480,36 @@ image.addEventListener("load", ()=>{
     };
     const rand = (n)=>Math.floor(Math.random() * n)
     ;
-    const rects = Array(100).fill(0).map(()=>{
+    const sprites = Array(100).fill(0).map(()=>{
         return {
-            x: rand(renderer.canvas.width - frame.width),
-            y: rand(renderer.canvas.height - frame.height)
+            pos: {
+                x: rand(renderer.canvas.width - frame.width),
+                y: rand(renderer.canvas.height - frame.height)
+            },
+            type: "TEXTURE",
+            meta: {
+                ...frame
+            },
+            w: frame.width,
+            h: frame.height,
+            rotation: 0,
+            anchor: {
+                x: -frame.width / 2,
+                y: -frame.height / 2
+            }
         };
     });
     let lastTs = 0;
-    let dt, angle = 0;
+    let dt;
     const start = (ts)=>{
         dt = (ts - lastTs) / 1000;
         lastTs = ts;
-        angle += dt * Math.PI / 4;
         // console.log(`FRAME RATE: ${1/dt}`)
         renderer.clear();
-        rects.forEach(({ x , y  })=>{
-            renderer.drawFrame(frame.x, frame.y, frame.width, frame.height, x, y, angle);
+        sprites.forEach((sprite)=>{
+            sprite.rotation += dt * Math.PI;
         });
+        sprites.forEach(renderer.render.bind(renderer));
         requestAnimationFrame(start);
     };
     requestAnimationFrame(start);
@@ -549,6 +562,8 @@ var _fragmentShader = require("./shaders/fragmentShader");
 var _fragmentShaderDefault = parcelHelpers.interopDefault(_fragmentShader);
 var _matrix = require("./utils/Matrix");
 var _matrixDefault = parcelHelpers.interopDefault(_matrix);
+var _stateStack = require("./utils/StateStack");
+var _stateStackDefault = parcelHelpers.interopDefault(_stateStack);
 class Webgl2Renderer {
     constructor({ image , cnvQry ="#viewport" , viewport  }){
         const gl = _getContextDefault.default(cnvQry);
@@ -565,24 +580,23 @@ class Webgl2Renderer {
         this.uMatLocation = gl.getUniformLocation(program, "u_matrix");
         this.uTexMatLocation = gl.getUniformLocation(program, "u_tex_matrix");
         this.matrixUtil = new _matrixDefault.default();
-        this.uMatrix = this.matrixUtil.create() // identity matrix
+        this.uTexMatrix = this.matrixUtil.create() // identity matrix
         ;
-        this.uTexMatrix = this.matrixUtil.create();
         // texture and position attributes initialization tasks
         gl.bindBuffer(gl.ARRAY_BUFFER, posBuffer);
         gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([
-            -0.5,
-            -0.5,
-            0.5,
-            -0.5,
-            -0.5,
-            0.5,
-            0.5,
-            -0.5,
-            0.5,
-            0.5,
-            -0.5,
-            0.5
+            0,
+            0,
+            1,
+            0,
+            0,
+            1,
+            1,
+            0,
+            1,
+            1,
+            0,
+            1
         ]), gl.STATIC_DRAW);
         gl.enableVertexAttribArray(aVertPosLocation);
         gl.vertexAttribPointer(aVertPosLocation, 2, gl.FLOAT, false, 0, 0);
@@ -626,6 +640,7 @@ class Webgl2Renderer {
             0,
             1
         ];
+        this.stateStack = new _stateStackDefault.default();
     // viewport.on("change", this.resize.bind(this))
     }
     set clearColor(arr) {
@@ -635,8 +650,26 @@ class Webgl2Renderer {
         this.gl.enable(this.gl.BLEND);
         this.gl.blendFunc(this.gl.SRC_ALPHA, this.gl.ONE_MINUS_SRC_ALPHA);
     }
+    translate(x, y) {
+        this.matrixUtil.translate(this.stateStack.active.mat, x, y);
+    }
+    rotate(rad) {
+        this.matrixUtil.rotate(this.stateStack.active.mat, rad);
+    }
+    scale(x, y) {
+        this.matrixUtil.scale(this.stateStack.active.mat, x, y);
+    }
+    save() {
+        this.stateStack.save();
+    }
+    restore() {
+        this.stateStack.restore();
+    }
     clear() {
         this.gl.clear(this.gl.COLOR_BUFFER_BIT | this.gl.DEPTH_BUFFER_BIT);
+    }
+    changeBackground(bgColor) {
+        this.canvas.style.background = bgColor;
     }
     resize({ width , height  }) {
         this.canvas.width = width;
@@ -644,27 +677,45 @@ class Webgl2Renderer {
         this.gl.viewport(0, 0, width, height);
         this.gl.uniform2f(this.uResLocation, width, height);
     }
-    drawFrame(srcX, srcY, width, height, destX, destY, angle) {
-        const { matrixUtil , uMatrix , uTexMatrix , uMatLocation , uTexMatLocation , image: image1 , gl: gl1  } = this;
-        matrixUtil.identity(uMatrix);
-        matrixUtil.scale(uMatrix, width, height);
-        angle && matrixUtil.rotate(uMatrix, angle);
-        matrixUtil.translate(uMatrix, destX + width / 2, destY + height / 2);
+    render(node) {
+        if (node.type !== "TEXTURE") return;
+        const srcX = node.meta.x;
+        const srcY = node.meta.y;
+        const width = node.w;
+        const height = node.h;
+        const destX = node.pos.x;
+        const destY = node.pos.y;
+        const rotation = node.rotation;
+        const anchor = node.anchor;
+        const initialRotation = node.initialRotation;
+        const initialPivotX = node.initialPivotX;
+        const { matrixUtil , uTexMatrix , uMatLocation , uTexMatLocation , image: image1 , gl: gl1  } = this;
+        this.save();
+        this.scale(width, height);
+        if (node.initialRotation) {
+            this.rotate(initialRotation);
+            this.translate(initialPivotX, 0);
+        }
+        if (rotation) {
+            anchor && this.translate(anchor.x, anchor.y);
+            this.rotate(rotation);
+            anchor && this.translate(-anchor.x, -anchor.y);
+        }
+        this.translate(destX, destY);
         matrixUtil.identity(uTexMatrix);
         matrixUtil.scale(uTexMatrix, width / image1.width, height / image1.height);
         matrixUtil.translate(uTexMatrix, srcX / image1.width, srcY / image1.height);
-        gl1.uniformMatrix3fv(uMatLocation, false, uMatrix);
+        gl1.uniformMatrix3fv(uMatLocation, false, this.stateStack.active.mat);
         gl1.uniformMatrix3fv(uTexMatLocation, false, uTexMatrix);
         gl1.drawArrays(gl1.TRIANGLES, 0, 6);
-    }
-    render() {
+        this.restore();
     }
     renderRec() {
     }
 }
 exports.default = Webgl2Renderer;
 
-},{"./utils/getContext":"bzbcp","./utils/createShader":"djIcq","./utils/createProgram":"itjX6","./shaders/vertexShader":"7S0u1","./shaders/fragmentShader":"aXirM","./utils/Matrix":"8nDwv","@parcel/transformer-js/src/esmodule-helpers.js":"JacNc"}],"bzbcp":[function(require,module,exports) {
+},{"./utils/getContext":"bzbcp","./utils/createShader":"djIcq","./utils/createProgram":"itjX6","./shaders/vertexShader":"7S0u1","./shaders/fragmentShader":"aXirM","./utils/Matrix":"8nDwv","@parcel/transformer-js/src/esmodule-helpers.js":"JacNc","./utils/StateStack":"9JhPw"}],"bzbcp":[function(require,module,exports) {
 var parcelHelpers = require("@parcel/transformer-js/src/esmodule-helpers.js");
 parcelHelpers.defineInteropFlag(exports);
 exports.default = (cnvSelector)=>{
@@ -712,6 +763,8 @@ exports.default = fragShaderSrc = `   #version 300 es\n    precision highp float
 },{"@parcel/transformer-js/src/esmodule-helpers.js":"JacNc"}],"8nDwv":[function(require,module,exports) {
 var parcelHelpers = require("@parcel/transformer-js/src/esmodule-helpers.js");
 parcelHelpers.defineInteropFlag(exports);
+parcelHelpers.export(exports, "IMatrix", ()=>IMatrix
+);
 class IMatrix {
     static create() {
         return [
@@ -827,6 +880,49 @@ class Matrix {
 }
 exports.default = Matrix;
 
-},{"@parcel/transformer-js/src/esmodule-helpers.js":"JacNc"}]},["8Ye98","6cF5V"], "6cF5V", "parcelRequire889a")
+},{"@parcel/transformer-js/src/esmodule-helpers.js":"JacNc"}],"9JhPw":[function(require,module,exports) {
+var parcelHelpers = require("@parcel/transformer-js/src/esmodule-helpers.js");
+parcelHelpers.defineInteropFlag(exports);
+var _matrix = require("./Matrix");
+const createEmptyState = ()=>({
+        blendMode: "",
+        alpha: 0,
+        mat: []
+    })
+;
+class StateStack {
+    /**
+     * global transform and alpha compositing states for renderer
+     * behaves like stack, but isn't for sake of performance
+     */ constructor(){
+        this._stack = [];
+        this._stack.push({
+            blendMode: "source-over",
+            alpha: 1,
+            mat: _matrix.IMatrix.create()
+        });
+        this.activeIdx = 0;
+        this.active = this._stack[0];
+    }
+    save() {
+        this.activeIdx++;
+        this._stack[this.activeIdx] = this._stack[this.activeIdx] || createEmptyState();
+        this.active = this._stack[this.activeIdx];
+        // copying previous state into the current one (can be interpreted as pushing a previous state into the stack)
+        const prev = this._stack[this.activeIdx - 1];
+        this.active.blendMode = prev.blendMode;
+        this.active.alpha = prev.alpha;
+        for(let i = 0; i < 9; i++)this.active.mat[i] = prev.mat[i];
+    }
+    restore() {
+        if (this.activeIdx === 0) throw new Error("couldn't restore state: no save point could be found");
+        // unwinding the state (popping the stack)
+        this.activeIdx--;
+        this.active = this._stack[this.activeIdx];
+    }
+}
+exports.default = StateStack;
+
+},{"./Matrix":"8nDwv","@parcel/transformer-js/src/esmodule-helpers.js":"JacNc"}]},["8Ye98","6cF5V"], "6cF5V", "parcelRequire889a")
 
 //# sourceMappingURL=index.5cb7de60.js.map
