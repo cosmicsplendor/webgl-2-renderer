@@ -7,7 +7,7 @@ import MatrixUtil from "./utils/Matrix"
 import StateStack from "./utils/StateStack"
 
 class Webgl2Renderer {
-    constructor({ image, cnvQry="#viewport", viewport }) {
+    constructor({ image, cnvQry="#viewport", viewport, scene, clearColor=[ 0, 0, 0, 0 ], background = "#000000" }) {
         const gl = getContext(cnvQry)
         const program = createProgram(
             gl,
@@ -60,8 +60,10 @@ class Webgl2Renderer {
         
         this.blendMode = "source-over"
         this.resize(viewport)
-        this.clearColor = [ 0, 0, 0, 1 ]
+        this.clearColor = clearColor
         this.stateStack = new StateStack()
+        this.scene = scene
+        this.changeBackground(background)
         // viewport.on("change", this.resize.bind(this))
     }
     set clearColor(arr) {
@@ -102,15 +104,20 @@ class Webgl2Renderer {
         this.gl.uniform2f(this.uResLocation, width, height)
     }
     render(node) {
-        if (node.type !== "TEXTURE") { return }
+        const { rotation, anchor } = node
+        if (!node.meta) { // if the node isn't renderable, just do transforms
+            if (rotation) {
+                anchor && this.translate(-anchor.x, -anchor.y)
+                this.rotate(rotation)
+                anchor && this.translate(anchor.x, anchor.y)
+            }
+            this.translate(node.pos.x, node.pos.y)
+            return
+        }
         const srcX = node.meta.x
         const srcY = node.meta.y
         const width = node.w
         const height = node.h
-        const destX = node.pos.x
-        const destY = node.pos.y
-        const rotation = node.rotation
-        const anchor = node.anchor
         const initialRotation = node.initialRotation
         const initialPivotX = node.initialPivotX
 
@@ -128,7 +135,7 @@ class Webgl2Renderer {
             this.rotate(rotation)
             anchor && this.translate(anchor.x, anchor.y)
         }
-        this.translate(destX, destY)
+        this.translate(node.pos.x, node.pos.y)
 
         matrixUtil.identity(uTexMatrix)
         matrixUtil.scale(uTexMatrix, width / image.width, height / image.height)
@@ -140,30 +147,24 @@ class Webgl2Renderer {
 
         this.restore()
     }
-    renderRec(node) {
+    renderRec(node=this.scene) {
         if (!node._visible) { return }
-        if (node === this.scene) { this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height) }
+        if (node === this.scene) { this.clear() }
 
-        this.ctx.save()
-        if (node.alpha) {
-            this.ctx.globalAlpha = node.alpha
-        }
-        if (node.blendMode) {
-            this.ctx.globalCompositeOperation = node.blendMode
-        }
+        this.save()
+        // if (node.alpha) {
+        //     this.stateStack.active.alpha = node.alpha
+        // }
+        // if (node.blendMode) {
+        //     this.stateStack.active.blendMode = node.blendMode
+        // }
         this.render(node)
-        if (node.debug) {
-            const hitbox = node.hitbox || getHitbox(node)
-            this.ctx.save()
-            this.render(new Rect({ pos: { ...hitbox }, ...hitbox, fill: "red", strokeWidth: 10  }))
-            this.ctx.restore()
-        }
         if (node.children) {
             for (let i = 0, len = node.children.length; i < len; i++) {
                 this.renderRecursively(node.children[i])
             }
         }
-        this.ctx.restore()
+        this.restore()
     }
 }
 

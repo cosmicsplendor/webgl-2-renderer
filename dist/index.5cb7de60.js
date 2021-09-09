@@ -469,7 +469,8 @@ image.addEventListener("load", ()=>{
     const renderer = new _webgl2RendererDefault.default({
         image,
         cnvQry: "#viewport",
-        viewport
+        viewport,
+        background: "#ffffff"
     });
     const frame = {
         "x": 606,
@@ -565,7 +566,12 @@ var _matrixDefault = parcelHelpers.interopDefault(_matrix);
 var _stateStack = require("./utils/StateStack");
 var _stateStackDefault = parcelHelpers.interopDefault(_stateStack);
 class Webgl2Renderer {
-    constructor({ image , cnvQry ="#viewport" , viewport  }){
+    constructor({ image , cnvQry ="#viewport" , viewport , scene , clearColor =[
+        0,
+        0,
+        0,
+        0
+    ] , background ="#000000"  }){
         const gl = _getContextDefault.default(cnvQry);
         const program = _createProgramDefault.default(gl, _createShaderDefault.default(gl, _vertexShaderDefault.default, gl.VERTEX_SHADER), _createShaderDefault.default(gl, _fragmentShaderDefault.default, gl.FRAGMENT_SHADER));
         this.canvas = document.querySelector(cnvQry);
@@ -615,13 +621,10 @@ class Webgl2Renderer {
         gl.generateMipmap(gl.TEXTURE_2D);
         this.blendMode = "source-over";
         this.resize(viewport);
-        this.clearColor = [
-            0,
-            0,
-            0,
-            1
-        ];
+        this.clearColor = clearColor;
         this.stateStack = new _stateStackDefault.default();
+        this.scene = scene;
+        this.changeBackground(background);
     // viewport.on("change", this.resize.bind(this))
     }
     set clearColor(arr) {
@@ -659,15 +662,20 @@ class Webgl2Renderer {
         this.gl.uniform2f(this.uResLocation, width, height);
     }
     render(node) {
-        if (node.type !== "TEXTURE") return;
+        const { rotation , anchor  } = node;
+        if (!node.meta) {
+            if (rotation) {
+                anchor && this.translate(-anchor.x, -anchor.y);
+                this.rotate(rotation);
+                anchor && this.translate(anchor.x, anchor.y);
+            }
+            this.translate(node.pos.x, node.pos.y);
+            return;
+        }
         const srcX = node.meta.x;
         const srcY = node.meta.y;
         const width = node.w;
         const height = node.h;
-        const destX = node.pos.x;
-        const destY = node.pos.y;
-        const rotation = node.rotation;
-        const anchor = node.anchor;
         const initialRotation = node.initialRotation;
         const initialPivotX = node.initialPivotX;
         const { matrixUtil , uTexMatrix , uMatLocation , uTexMatLocation , image: image1 , gl: gl1  } = this;
@@ -682,7 +690,7 @@ class Webgl2Renderer {
             this.rotate(rotation);
             anchor && this.translate(anchor.x, anchor.y);
         }
-        this.translate(destX, destY);
+        this.translate(node.pos.x, node.pos.y);
         matrixUtil.identity(uTexMatrix);
         matrixUtil.scale(uTexMatrix, width / image1.width, height / image1.height);
         matrixUtil.translate(uTexMatrix, srcX / image1.width, srcY / image1.height);
@@ -691,28 +699,19 @@ class Webgl2Renderer {
         gl1.drawArrays(gl1.TRIANGLES, 0, 6);
         this.restore();
     }
-    renderRec(node) {
+    renderRec(node = this.scene) {
         if (!node._visible) return;
-        if (node === this.scene) this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
-        this.ctx.save();
-        if (node.alpha) this.ctx.globalAlpha = node.alpha;
-        if (node.blendMode) this.ctx.globalCompositeOperation = node.blendMode;
+        if (node === this.scene) this.clear();
+        this.save();
+        // if (node.alpha) {
+        //     this.stateStack.active.alpha = node.alpha
+        // }
+        // if (node.blendMode) {
+        //     this.stateStack.active.blendMode = node.blendMode
+        // }
         this.render(node);
-        if (node.debug) {
-            const hitbox = node.hitbox || getHitbox(node);
-            this.ctx.save();
-            this.render(new Rect({
-                pos: {
-                    ...hitbox
-                },
-                ...hitbox,
-                fill: "red",
-                strokeWidth: 10
-            }));
-            this.ctx.restore();
-        }
         if (node.children) for(let i = 0, len = node.children.length; i < len; i++)this.renderRecursively(node.children[i]);
-        this.ctx.restore();
+        this.restore();
     }
 }
 exports.default = Webgl2Renderer;

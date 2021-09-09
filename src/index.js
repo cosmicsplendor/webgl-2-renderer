@@ -6,7 +6,7 @@ const image = new Image()
 
 image.src = texAtlasUrl
 image.addEventListener("load", () => {
-    const renderer = new Webgl2Renderer({ image, cnvQry: "#viewport", viewport})
+    const renderer = new Webgl2Renderer({ image, cnvQry: "#viewport", viewport, background: "#ffffff" })
     const frame = {"x":606,"y":302,"rotation":0,"width":88,"height":88}
     const rand = n => Math.floor(Math.random() * n)
     const sprites = Array(100).fill(0).map(() => {
