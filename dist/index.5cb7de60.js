@@ -573,16 +573,14 @@ class Webgl2Renderer {
         this.gl = gl;
         // webgl uniforms, attributes and buffers
         const aVertPosLocation = gl.getAttribLocation(program, "a_vert_pos");
-        const aTexCoordsLocation = gl.getAttribLocation(program, "a_tex_coords");
         const posBuffer = gl.createBuffer();
-        const texBuffer = gl.createBuffer();
         this.uResLocation = gl.getUniformLocation(program, "u_resolution");
         this.uMatLocation = gl.getUniformLocation(program, "u_matrix");
         this.uTexMatLocation = gl.getUniformLocation(program, "u_tex_matrix");
         this.matrixUtil = new _matrixDefault.default();
         this.uTexMatrix = this.matrixUtil.create() // identity matrix
         ;
-        // texture and position attributes initialization tasks
+        // position attributes initialization tasks
         gl.bindBuffer(gl.ARRAY_BUFFER, posBuffer);
         gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([
             0,
@@ -600,23 +598,6 @@ class Webgl2Renderer {
         ]), gl.STATIC_DRAW);
         gl.enableVertexAttribArray(aVertPosLocation);
         gl.vertexAttribPointer(aVertPosLocation, 2, gl.FLOAT, false, 0, 0);
-        gl.bindBuffer(gl.ARRAY_BUFFER, texBuffer);
-        gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([
-            0,
-            0,
-            1,
-            0,
-            0,
-            1,
-            1,
-            0,
-            1,
-            1,
-            0,
-            1
-        ]), gl.STATIC_DRAW);
-        gl.enableVertexAttribArray(aTexCoordsLocation);
-        gl.vertexAttribPointer(aTexCoordsLocation, 2, gl.FLOAT, true, 0, 0);
         gl.bindBuffer(gl.ARRAY_BUFFER, null);
         // texture states setup
         const texture = gl.createTexture();
@@ -710,7 +691,28 @@ class Webgl2Renderer {
         gl1.drawArrays(gl1.TRIANGLES, 0, 6);
         this.restore();
     }
-    renderRec() {
+    renderRec(node) {
+        if (!node._visible) return;
+        if (node === this.scene) this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+        this.ctx.save();
+        if (node.alpha) this.ctx.globalAlpha = node.alpha;
+        if (node.blendMode) this.ctx.globalCompositeOperation = node.blendMode;
+        this.render(node);
+        if (node.debug) {
+            const hitbox = node.hitbox || getHitbox(node);
+            this.ctx.save();
+            this.render(new Rect({
+                pos: {
+                    ...hitbox
+                },
+                ...hitbox,
+                fill: "red",
+                strokeWidth: 10
+            }));
+            this.ctx.restore();
+        }
+        if (node.children) for(let i = 0, len = node.children.length; i < len; i++)this.renderRecursively(node.children[i]);
+        this.ctx.restore();
     }
 }
 exports.default = Webgl2Renderer;
@@ -753,7 +755,7 @@ exports.default = (gl, vertShader, fragShader)=>{
 },{"@parcel/transformer-js/src/esmodule-helpers.js":"JacNc"}],"7S0u1":[function(require,module,exports) {
 var parcelHelpers = require("@parcel/transformer-js/src/esmodule-helpers.js");
 parcelHelpers.defineInteropFlag(exports);
-exports.default = vertexShaderSrc = `   #version 300 es\n\n    in vec2 a_vert_pos;\n    in vec2 a_tex_coords;\n    \n    uniform vec2 u_resolution;\n    uniform mat3 u_matrix;\n    uniform mat3 u_tex_matrix;\n\n    out vec2 v_tex_coords;\n\n    void main() {\n        \n        v_tex_coords = (u_tex_matrix * vec3(a_tex_coords, 1)).xy;\n        \n        vec2 pos_vec = (u_matrix * vec3(a_vert_pos, 1)).xy;\n\n        // converting to clipspace\n        vec2 normalized = pos_vec / u_resolution;\n        vec2 clipspace = (normalized * 2.0) - 1.0;\n        gl_Position = vec4(clipspace * vec2(1, -1), 0, 1);\n    }\n`;
+exports.default = vertexShaderSrc = `   #version 300 es\n\n    in vec2 a_vert_pos;\n    \n    uniform vec2 u_resolution;\n    uniform mat3 u_matrix;\n    uniform mat3 u_tex_matrix;\n\n    out vec2 v_tex_coords;\n\n    void main() {\n        \n        v_tex_coords = (u_tex_matrix * vec3(a_vert_pos, 1)).xy;\n        \n        vec2 pos_vec = (u_matrix * vec3(a_vert_pos, 1)).xy;\n\n        // converting to clipspace\n        vec2 normalized = pos_vec / u_resolution;\n        vec2 clipspace = (normalized * 2.0) - 1.0;\n        gl_Position = vec4(clipspace * vec2(1, -1), 0, 1);\n    }\n`;
 
 },{"@parcel/transformer-js/src/esmodule-helpers.js":"JacNc"}],"aXirM":[function(require,module,exports) {
 var parcelHelpers = require("@parcel/transformer-js/src/esmodule-helpers.js");

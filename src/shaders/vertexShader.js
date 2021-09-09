@@ -2,7 +2,6 @@ export default vertexShaderSrc =
 `   #version 300 es
 
     in vec2 a_vert_pos;
-    in vec2 a_tex_coords;
     
     uniform vec2 u_resolution;
     uniform mat3 u_matrix;
@@ -12,7 +11,7 @@ export default vertexShaderSrc =
 
     void main() {
         
-        v_tex_coords = (u_tex_matrix * vec3(a_tex_coords, 1)).xy;
+        v_tex_coords = (u_tex_matrix * vec3(a_vert_pos, 1)).xy;
         
         vec2 pos_vec = (u_matrix * vec3(a_vert_pos, 1)).xy;
 
