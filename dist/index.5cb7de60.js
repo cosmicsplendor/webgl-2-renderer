@@ -566,7 +566,7 @@ var _matrixDefault = parcelHelpers.interopDefault(_matrix);
 var _stateStack = require("./utils/StateStack");
 var _stateStackDefault = parcelHelpers.interopDefault(_stateStack);
 class Webgl2Renderer {
-    constructor({ image , cnvQry ="#viewport" , viewport , scene , clearColor =[
+    constructor({ image: image1 , cnvQry ="#viewport" , viewport , scene , clearColor =[
         0,
         0,
         0,
@@ -575,8 +575,9 @@ class Webgl2Renderer {
         const gl = _getContextDefault.default(cnvQry);
         const program = _createProgramDefault.default(gl, _createShaderDefault.default(gl, _vertexShaderDefault.default, gl.VERTEX_SHADER), _createShaderDefault.default(gl, _fragmentShaderDefault.default, gl.FRAGMENT_SHADER));
         this.canvas = document.querySelector(cnvQry);
-        this.image = image;
+        this.image = image1;
         this.gl = gl;
+        this.program = program;
         // webgl uniforms, attributes and buffers
         const aVertPosLocation = gl.getAttribLocation(program, "a_vert_pos");
         const posBuffer = gl.createBuffer();
@@ -605,20 +606,8 @@ class Webgl2Renderer {
         gl.enableVertexAttribArray(aVertPosLocation);
         gl.vertexAttribPointer(aVertPosLocation, 2, gl.FLOAT, false, 0, 0);
         gl.bindBuffer(gl.ARRAY_BUFFER, null);
-        // texture states setup
-        const texture = gl.createTexture();
-        const uTexUnitLocation = gl.getUniformLocation(program, "u_tex_unit");
-        const texUnit = 0;
-        gl.useProgram(program);
-        gl.activeTexture(gl.TEXTURE0 + texUnit);
-        gl.uniform1i(uTexUnitLocation, texUnit);
-        gl.bindTexture(gl.TEXTURE_2D, texture);
-        gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, image);
-        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
-        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
-        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
-        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
-        gl.generateMipmap(gl.TEXTURE_2D);
+        // misc setups
+        this.setTexture(image1);
         this.blendMode = "source-over";
         this.resize(viewport);
         this.clearColor = clearColor;
@@ -633,6 +622,23 @@ class Webgl2Renderer {
     set blendMode(val) {
         this.gl.enable(this.gl.BLEND);
         this.gl.blendFunc(this.gl.SRC_ALPHA, this.gl.ONE_MINUS_SRC_ALPHA);
+    }
+    setTexture(image) {
+        // texture states setup
+        const { gl: gl1 , program: program1  } = this;
+        const texture = gl1.createTexture();
+        const uTexUnitLocation = gl1.getUniformLocation(program1, "u_tex_unit");
+        const texUnit = 0;
+        gl1.useProgram(program1);
+        gl1.activeTexture(gl1.TEXTURE0 + texUnit);
+        gl1.uniform1i(uTexUnitLocation, texUnit);
+        gl1.bindTexture(gl1.TEXTURE_2D, texture);
+        gl1.texImage2D(gl1.TEXTURE_2D, 0, gl1.RGBA, gl1.RGBA, gl1.UNSIGNED_BYTE, image);
+        gl1.texParameteri(gl1.TEXTURE_2D, gl1.TEXTURE_WRAP_S, gl1.CLAMP_TO_EDGE);
+        gl1.texParameteri(gl1.TEXTURE_2D, gl1.TEXTURE_WRAP_T, gl1.CLAMP_TO_EDGE);
+        gl1.texParameteri(gl1.TEXTURE_2D, gl1.TEXTURE_MAG_FILTER, gl1.LINEAR);
+        gl1.texParameteri(gl1.TEXTURE_2D, gl1.TEXTURE_MIN_FILTER, gl1.LINEAR);
+        gl1.generateMipmap(gl1.TEXTURE_2D);
     }
     translate(x, y) {
         this.matrixUtil.translate(this.stateStack.active.mat, x, y);
@@ -678,7 +684,7 @@ class Webgl2Renderer {
         const height = node.h;
         const initialRotation = node.initialRotation;
         const initialPivotX = node.initialPivotX;
-        const { matrixUtil , uTexMatrix , uMatLocation , uTexMatLocation , image: image1 , gl: gl1  } = this;
+        const { matrixUtil , uTexMatrix , uMatLocation , uTexMatLocation , image: image2 , gl: gl1  } = this;
         this.save();
         this.scale(width, height);
         if (node.initialRotation) {
@@ -692,8 +698,8 @@ class Webgl2Renderer {
         }
         this.translate(node.pos.x, node.pos.y);
         matrixUtil.identity(uTexMatrix);
-        matrixUtil.scale(uTexMatrix, width / image1.width, height / image1.height);
-        matrixUtil.translate(uTexMatrix, srcX / image1.width, srcY / image1.height);
+        matrixUtil.scale(uTexMatrix, width / image2.width, height / image2.height);
+        matrixUtil.translate(uTexMatrix, srcX / image2.width, srcY / image2.height);
         gl1.uniformMatrix3fv(uMatLocation, false, this.stateStack.active.mat);
         gl1.uniformMatrix3fv(uTexMatLocation, false, uTexMatrix);
         gl1.drawArrays(gl1.TRIANGLES, 0, 6);

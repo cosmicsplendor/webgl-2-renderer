@@ -17,6 +17,7 @@ class Webgl2Renderer {
         this.canvas = document.querySelector(cnvQry)
         this.image = image
         this.gl = gl
+        this.program = program
 
         // webgl uniforms, attributes and buffers
         const aVertPosLocation = gl.getAttribLocation(program, "a_vert_pos")
@@ -43,21 +44,8 @@ class Webgl2Renderer {
 
         gl.bindBuffer(gl.ARRAY_BUFFER, null)
         
-        // texture states setup
-        const texture = gl.createTexture()
-        const uTexUnitLocation = gl.getUniformLocation(program, "u_tex_unit")
-        const texUnit = 0
-        gl.useProgram(program)
-        gl.activeTexture(gl.TEXTURE0 + texUnit)
-        gl.uniform1i(uTexUnitLocation, texUnit)
-        gl.bindTexture(gl.TEXTURE_2D, texture)
-        gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, image)
-        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE)
-        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE)
-        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR)
-        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR)
-        gl.generateMipmap(gl.TEXTURE_2D)
-        
+        // misc setups
+        this.setTexture(image)
         this.blendMode = "source-over"
         this.resize(viewport)
         this.clearColor = clearColor
@@ -75,6 +63,23 @@ class Webgl2Renderer {
                 this.gl.enable(this.gl.BLEND)
                 this.gl.blendFunc(this.gl.SRC_ALPHA, this.gl.ONE_MINUS_SRC_ALPHA)
         }
+    }
+    setTexture(image) {
+        // texture states setup
+        const { gl, program } = this
+        const texture = gl.createTexture()
+        const uTexUnitLocation = gl.getUniformLocation(program, "u_tex_unit")
+        const texUnit = 0
+        gl.useProgram(program)
+        gl.activeTexture(gl.TEXTURE0 + texUnit)
+        gl.uniform1i(uTexUnitLocation, texUnit)
+        gl.bindTexture(gl.TEXTURE_2D, texture)
+        gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, image)
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE)
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE)
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR)
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR)
+        gl.generateMipmap(gl.TEXTURE_2D)
     }
     translate(x, y) {
         this.matrixUtil.translate(this.stateStack.active.mat, x, y)
